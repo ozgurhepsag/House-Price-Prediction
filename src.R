@@ -31,6 +31,10 @@ boxplot(kc_house$bathrooms)
 hist(kc_house$price)
 hist(log(kc_house$price))
 
+per_waterfront0 <- nrow(kc_house[kc_house$waterfront == 0,]) / nrow(kc_house[]) * 100 # Percentage of the waterfron = 0
+
+per_view0 <- nrow(kc_house[kc_house$view == 0,]) / nrow(kc_house[]) * 100 # Percentage of the waterfron = 0
+
 ggplot(kc_house, aes(x=yr_renovated)) + geom_histogram() + 
   ggtitle("Number of Renovated Years") + theme(plot.title = element_text(hjust = 0.5))
   
@@ -86,8 +90,8 @@ corrplot(corr, method = "color", outline = T, cl.pos = 'n', rect.col = "black", 
 
 # ==== Data Preparation ====
 
-price <- kc_house$price
-kc_house$price <- log(kc_house$price)
+#price <- kc_house$price
+#kc_house$price <- log(kc_house$price)
 
 kc_house$id <-  NULL # No need for id column in this dataset
 
@@ -105,7 +109,7 @@ kc_house$renovated <- ifelse(kc_house$yr_renovated == 0, 0, 1)
 # Changing the Date Format for Regression
 kc_house$date <- (substr(kc_house$date, 1, 8))
 kc_house$date <- ymd(kc_house$date)
-kc_house$date <- as.numeric(as.Date(kc_house$date, origin = "2014-04-01"))
+kc_house$date <- as.numeric(as.Date(kc_house$date, origin = "2014-04-30"))
 
 kc_house$yr_renovated <- NULL
 
@@ -117,10 +121,16 @@ kc_house$view <- as.factor(kc_house$view)
 kc_house$waterfront <- as.factor(kc_house$waterfront)
 #$waterfront <- NULL
 kc_house$zipcode <- as.factor(kc_house$zipcode)
-kc_house$renovated <- as.factor(kc_house$renovated)
+#kc_house$renovated <- as.factor(kc_house$renovated)
+kc_house$grade <- as.factor(kc_house$grade)
 
 kc_house$sqft_basement <- ifelse(kc_house$sqft_basement > 0, 1, 0)
 kc_house$above <- NULL
+
+nrow(kc_house[kc_house$bedrooms>10,])
+
+kc_house <- kc_house[-(kc_house$bedrooms > 10),]
+kc_house$bedrooms <- NULL
 
 #kc_house$sqft_basement <- NULL
 # kc_house$date
@@ -130,14 +140,39 @@ kc_house$above <- NULL
 #kc_house$lat = NULL
 #kc_house$long = NULL
 
-
 model <- lm(price ~ . , data = kc_house)
 
 summary(model)
 
-per_waterfront0 <- nrow(kc_house[kc_house$waterfront == 0,]) / nrow(kc_house[]) * 100 # Percentage of the waterfron = 0
+length(levels(kc_house$zipcode))
 
-per_view0 <- nrow(kc_house[kc_house$view == 0,]) / nrow(kc_house[]) * 100 # Percentage of the waterfron = 0
+# ==== Test and Evaluation ====
+
+avg_errors <- data.frame(0, 0, 0) # [1] RMSE, [2] R2, [3] MAE
+colnames(avg_errors) <- c("RMSE", "Rsquared", "MAE")
+
+for(i in c(1:50)){
+  sample <- sample.int(n=nrow(kc_house), size = floor(0.75*nrow(kc_house)), replace = F)
+  
+  # Splitting train and test data
+  train <- kc_house[sample, ]
+  test  <- kc_house[-sample, ]
+  train_model <- lm(price ~ . , data = train)
+  
+  summary(train_model)
+  
+  predP <- predict(train_model, test)
+  act_pred <- data.frame(obs=test$price, pred=predP)
+  err <- defaultSummary(act_pred)
+  
+  for(i in c(1:3)){ # Accumulate the errors
+    avg_errors[i] <- err[i] + avg_errors[i]
+  }
+  
+}
+
+avg_errors <- avg_errors / 50
+print(avg_errors)
 
 
 # try the performance of the model by changing the values of the yr_renovated == 0 values with yr_built
