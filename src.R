@@ -148,8 +148,7 @@ length(levels(kc_house$zipcode))
 
 # ==== Test and Evaluation ====
 
-avg_errors <- data.frame(0, 0, 0) # [1] RMSE, [2] R2, [3] MAE
-colnames(avg_errors) <- c("RMSE", "Rsquared", "MAE")
+errors <- data.frame() # [1] RMSE, [2] R2, [3] MAE
 
 for(i in c(1:50)){
   sample <- sample.int(n=nrow(kc_house), size = floor(0.75*nrow(kc_house)), replace = F)
@@ -161,18 +160,30 @@ for(i in c(1:50)){
   
   summary(train_model)
   
-  predP <- predict(train_model, test)
-  act_pred <- data.frame(obs=test$price, pred=predP)
+  test$pred <- predict(train_model, test)
+  act_pred <- data.frame(obs=test$price, pred=test$pred)
   err <- defaultSummary(act_pred)
+
+  row_error <- c(0, 0, 0)
   
-  for(i in c(1:3)){ # Accumulate the errors
-    avg_errors[i] <- err[i] + avg_errors[i]
+  for(j in c(1:3)){ # Accumulate the errors
+    row_error[j] <- err[j]
   }
+  
+  errors <- rbind(errors, row_error)
   
 }
 
-avg_errors <- avg_errors / 50
-print(avg_errors)
+#Plotting the actual and predicted of the last iteration
+ggplot(test,aes(x=price,y=pred))+geom_point()+geom_abline(color="blue")
+
+names(errors) <- c("RMSE", "Rsquared", "MAE")
+print(errors)
+
+avg_r2 <- mean(errors$Rsquared)
+avg_rmse <- mean(errors$RMSE)
+avg_mae <- mean(errors$MAE)
+
 
 
 # try the performance of the model by changing the values of the yr_renovated == 0 values with yr_built
