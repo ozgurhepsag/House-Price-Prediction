@@ -1,8 +1,6 @@
 install.packages("pacman")
 library(pacman)
-pacman:: p_load(Metrics, car, corrplot, caTools, ggplot2, DAAG, dplyr
-                , caret, lubridate, tidyverse, ggthemes, RColorBrewer, reshape2)
-
+pacman:: p_load(corrplot, ggplot2, dplyr, caret, lubridate, ggthemes, RColorBrewer)
 
 options(scipen=999)
 
@@ -22,6 +20,7 @@ apply(kc_house, 2, function(x) sum(is.na(x)))
 
 hist(kc_house$bedrooms)
 boxplot(kc_house$bedrooms)
+hist(kc_house$grade)
 
 max(kc_house$bedrooms)
 
@@ -31,9 +30,11 @@ boxplot(kc_house$bathrooms)
 hist(kc_house$price)
 hist(log(kc_house$price))
 
-per_waterfront0 <- nrow(kc_house[kc_house$waterfront == 0,]) / nrow(kc_house[]) * 100 # Percentage of the waterfron = 0
+# Percentage of the waterfron = 0
+per_waterfront0 <- nrow(kc_house[kc_house$waterfront == 0,]) / nrow(kc_house[]) * 100 
 
-per_view0 <- nrow(kc_house[kc_house$view == 0,]) / nrow(kc_house[]) * 100 # Percentage of the waterfron = 0
+# Percentage of the waterfron = 0
+per_view0 <- nrow(kc_house[kc_house$view == 0,]) / nrow(kc_house[]) * 100 
 
 ggplot(kc_house, aes(x=yr_renovated)) + geom_histogram() + 
   ggtitle("Number of Renovated Years") + theme(plot.title = element_text(hjust = 0.5))
@@ -86,61 +87,69 @@ corrplot(corr, method = "color", outline = T, cl.pos = 'n', rect.col = "black", 
          , addCoef.col = "black", number.digits = 2, number.cex = 0.60, tl.cex = 0.7
          , cl.cex = 1, col = colorRampPalette(c("green4","white","red"))(100))
 
-
-
 # ==== Data Preparation ====
 
-#price <- kc_house$price
-#kc_house$price <- log(kc_house$price)
+# kc_house$bedrooms <- as.factor(kc_house$bedrooms)
+# kc_house$bathrooms <- as.factor(kc_house$bathrooms)
+# kc_house$floors <- as.factor(kc_house$floors)
+# kc_house$condition <- as.factor(kc_house$condition)
+# kc_house$view <- as.factor(kc_house$view)
+# kc_house$waterfront <- as.factor(kc_house$waterfront)
+# kc_house$grade <- as.factor(kc_house$grade)
 
-kc_house$id <-  NULL # No need for id column in this dataset
+# price <- kc_house$price
+# kc_house$price <- log(kc_house$price)
+
+# No need for id column in this dataset
+kc_house$id <-  NULL 
 
 # Sqft_living = sqft_above + sqft_basement, 
 # hence, information in sqft_above and sqft_basement are redundant and not needed for analysis.
-
-kc_house$renovated <- ifelse(kc_house$yr_renovated == 0, 0, 1)
+kc_house$sqft_living15 <- NULL
+kc_house$sqft_lot15 <- NULL
 
 # Changing date to yyyymm format
-#kc_house$date <- substr(kc_house$date, 1, 6)
+# kc_house$date <- substr(kc_house$date, 1, 6)
 
 # Converting it to numeric as we can only use numeric values for corrleation
-#kc_house$date <- as.numeric(as.character(kc_house$date))
+# kc_house$date <- as.numeric(as.character(kc_house$date))
 
 # Changing the Date Format for Regression
 kc_house$date <- (substr(kc_house$date, 1, 8))
 kc_house$date <- ymd(kc_house$date)
 kc_house$date <- as.numeric(as.Date(kc_house$date, origin = "2014-04-30"))
 
+kc_house$renovated <- ifelse(kc_house$yr_renovated == 0, 0, 1)
 kc_house$yr_renovated <- NULL
 
-kc_house$bedrooms <- as.factor(kc_house$bedrooms)
-kc_house$bathrooms <- as.factor(kc_house$bathrooms)
-kc_house$floors <- as.factor(kc_house$floors)
-kc_house$condition <- as.factor(kc_house$condition)
-kc_house$view <- as.factor(kc_house$view)
-kc_house$waterfront <- as.factor(kc_house$waterfront)
-#$waterfront <- NULL
 kc_house$zipcode <- as.factor(kc_house$zipcode)
-#kc_house$renovated <- as.factor(kc_house$renovated)
-kc_house$grade <- as.factor(kc_house$grade)
 
 kc_house$sqft_basement <- ifelse(kc_house$sqft_basement > 0, 1, 0)
 kc_house$above <- NULL
 
-nrow(kc_house[kc_house$bedrooms>10,])
+nrow(kc_house[kc_house$bedrooms>5 | kc_house$bedrooms<2,c("price", "bedrooms")])
+
+nrow(kc_house)
+
+for(i in c(0:11, 33))
+  cat(mean(kc_house[kc_house$bedrooms == i,"price"]), nrow(kc_house[kc_house$bedrooms == i,]), " ")
+
+nrow(kc_house[kc_house$bathrooms>3 | kc_house$bathrooms<1,])
 
 kc_house <- kc_house[-(kc_house$bedrooms > 10),]
-kc_house$bedrooms <- NULL
+# kc_house$bedrooms <- NULL
 
-#kc_house$sqft_basement <- NULL
+# kc_house$sqft_basement <- NULL
 # kc_house$date
 
-#kc_house$sqft_lot = NULL
-#kc_house$sqft_lot15 = NULL
-#kc_house$lat = NULL
-#kc_house$long = NULL
+# kc_house$sqft_lot = NULL
+# kc_house$sqft_lot15 = NULL
+# kc_house$lat = NULL
+# kc_house$long = NULL
+# kc_house$waterfront <- NULL
 
 model <- lm(price ~ . , data = kc_house)
+# model <- glm(price ~ . , data = kc_house, family = gaussian())
 
 summary(model)
 
@@ -148,7 +157,8 @@ length(levels(kc_house$zipcode))
 
 # ==== Test and Evaluation ====
 
-errors <- data.frame() # [1] RMSE, [2] R2, [3] MAE
+# [1] RMSE, [2] R2, [3] MAE
+errors <- data.frame() 
 best_r2 <- data.frame()
 best_mae <- data.frame()
 best_rmse <- data.frame()
@@ -156,7 +166,9 @@ best_r2_val <- 0
 best_mae_val <- 0
 best_rmse_val <- 0
 
-for(i in c(1:50)){
+iteration_num <- 50
+
+for(i in c(1:iteration_num)){
   sample <- sample.int(n=nrow(kc_house), size = floor(0.75*nrow(kc_house)), replace = F)
   
   # Splitting train and test data
@@ -193,7 +205,6 @@ for(i in c(1:50)){
     
     if(err[3] <  best_mae)
       best_mae <- test
-            
   }
   
   errors <- rbind(errors, row_error)
@@ -210,15 +221,15 @@ avg_mae <- mean(errors$MAE)
 cat("Avarage of Root Mean Squared Error:", avg_rmse, "Avareage of R squared:", avg_r2,
     "Avarage of Mean Absolute Error:", avg_mae)
 
-#Plotting the actual and predicted of the best prediction according to the calculations
-ggplot(best_rmse,aes(x=price,y=pred))+geom_point()+geom_abline(color="red")
+#Plotting the actual and predicted of the best predictions for the each error types, sometimes they could be same
+ggplot(best_rmse,aes(x=price,y=pred)) + geom_point() + geom_abline(color="red")
 
-ggplot(best_mae,aes(x=price,y=pred))+geom_point()+geom_abline(color="red")
+ggplot(best_mae,aes(x=price,y=pred)) + geom_point() + geom_abline(color="red")
 
-ggplot(best_r2,aes(x=price,y=pred))+geom_point()+geom_abline(color="red")
+ggplot(best_r2,aes(x=price,y=pred)) + geom_point() + geom_abline(color="red")
 
-act_pred <- data.frame(obs=best_rmse$price, pred=best_rmse$pred)
-err <- defaultSummary(act_pred)
+
+
 
 
 # try the performance of the model by changing the values of the yr_renovated == 0 values with yr_built
