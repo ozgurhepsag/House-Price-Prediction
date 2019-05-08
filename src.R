@@ -149,6 +149,12 @@ length(levels(kc_house$zipcode))
 # ==== Test and Evaluation ====
 
 errors <- data.frame() # [1] RMSE, [2] R2, [3] MAE
+best_r2 <- data.frame()
+best_mae <- data.frame()
+best_rmse <- data.frame()
+best_r2_val <- 0
+best_mae_val <- 0
+best_rmse_val <- 0
 
 for(i in c(1:50)){
   sample <- sample.int(n=nrow(kc_house), size = floor(0.75*nrow(kc_house)), replace = F)
@@ -170,12 +176,29 @@ for(i in c(1:50)){
     row_error[j] <- err[j]
   }
   
+  if(i == 1){
+    best_r2_val <- err[2]
+    best_mae_val <- err[3]
+    best_rmse_val <- err[1]
+    best_r2 <- test
+    best_mae <- test
+    best_rmse <- test
+  }else{
+    
+    if(err[1] <  best_rmse_val)
+      best_rmse <- test
+    
+    if(err[2] >  best_r2_val)
+      best_r2 <- test
+    
+    if(err[3] <  best_mae)
+      best_mae <- test
+            
+  }
+  
   errors <- rbind(errors, row_error)
   
 }
-
-#Plotting the actual and predicted of the last iteration
-ggplot(test,aes(x=price,y=pred))+geom_point()+geom_abline(color="blue")
 
 names(errors) <- c("RMSE", "Rsquared", "MAE")
 print(errors)
@@ -184,6 +207,18 @@ avg_r2 <- mean(errors$Rsquared)
 avg_rmse <- mean(errors$RMSE)
 avg_mae <- mean(errors$MAE)
 
+cat("Avarage of Root Mean Squared Error:", avg_rmse, "Avareage of R squared:", avg_r2,
+    "Avarage of Mean Absolute Error:", avg_mae)
+
+#Plotting the actual and predicted of the best prediction according to the calculations
+ggplot(best_rmse,aes(x=price,y=pred))+geom_point()+geom_abline(color="red")
+
+ggplot(best_mae,aes(x=price,y=pred))+geom_point()+geom_abline(color="red")
+
+ggplot(best_r2,aes(x=price,y=pred))+geom_point()+geom_abline(color="red")
+
+act_pred <- data.frame(obs=best_rmse$price, pred=best_rmse$pred)
+err <- defaultSummary(act_pred)
 
 
 # try the performance of the model by changing the values of the yr_renovated == 0 values with yr_built
