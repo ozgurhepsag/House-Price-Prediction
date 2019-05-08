@@ -60,6 +60,8 @@ ggplot(kc_house,aes(x=log(price)))+geom_density(fill="tomato4")
 ggplot(kc_house,aes(x=bathrooms)) + geom_histogram(fill="green4",binwidth=0.5,size=0.1) +
   scale_x_continuous(limits=c(1,8))
 
+ggplot(kc_house, aes(kc_house$zipcode)) + stat_bin(bins = 100, colour="black", fill="green")
+
 mycolors = c(brewer.pal(name="Dark2", n = 8), brewer.pal(name="Paired", n = 6))
 
 kc_house %>% filter(bedrooms<30)%>%
@@ -81,6 +83,9 @@ ggplot(kc_house, aes(yr_built, price)) +
   theme_minimal() +
   theme(text = element_text(face = "bold"))
 
+ggplot(data = kc_house, mapping = aes(x = sqft_living, y = price)) + 
+  geom_point(colour = 'red') + geom_smooth(method = 'lm')
+
 
 corr = cor(kc_house[,3:21])
 corrplot(corr, method = "color", outline = T, cl.pos = 'n', rect.col = "black",  tl.col = "indianred4"
@@ -88,6 +93,29 @@ corrplot(corr, method = "color", outline = T, cl.pos = 'n', rect.col = "black", 
          , cl.cex = 1, col = colorRampPalette(c("green4","white","red"))(100))
 
 # ==== Data Preparation ====
+
+# Handle outliers with Clamp Transformation on bedrooms and bathrooms features
+nrow(kc_house[kc_house$bathrooms>4 | kc_house$bathrooms<1,])
+
+# 33 bedrooms with 1.75 bathrooms in a sqft_living of 1620 with a price of 640000 makes no sense. 
+kc_house[kc_house$bedrooms == 33, ] 
+
+# 11 bedrooms with 3 bathrooms in a sqft_living of 3000 with a price of 520000 makes no sense.
+kc_house[kc_house$bedrooms == 9, ] 
+
+# Remove them
+dim(kc_house <- kc_house[-c(8758,15871), ])
+
+tapply(kc_house$price,kc_house$bedrooms,length)
+tapply(kc_house$price,kc_house$bedrooms,median)
+
+kc_house[kc_house$bedrooms == 10, 'bedrooms'] <- 6
+kc_house[kc_house$bedrooms == 9 | kc_house$bedrooms == 8, 'bedrooms'] <- 7
+
+tapply(kc_house$price,kc_house$bathrooms,length)
+tapply(kc_house$price,kc_house$bathrooms,median)
+
+kc_house[kc_house$bathrooms > 4.25, 'bathrooms'] <- 4.25
 
 # kc_house$bedrooms <- as.factor(kc_house$bedrooms)
 # kc_house$bathrooms <- as.factor(kc_house$bathrooms)
@@ -108,6 +136,10 @@ kc_house$id <-  NULL
 kc_house$sqft_living15 <- NULL
 kc_house$sqft_lot15 <- NULL
 
+# zipcode is directly connected to latitude and longitude, so only zipcode will be fine.
+kc_house$lat = NULL
+kc_house$long = NULL
+
 # Changing date to yyyymm format
 # kc_house$date <- substr(kc_house$date, 1, 6)
 
@@ -127,16 +159,6 @@ kc_house$zipcode <- as.factor(kc_house$zipcode)
 kc_house$sqft_basement <- ifelse(kc_house$sqft_basement > 0, 1, 0)
 kc_house$above <- NULL
 
-nrow(kc_house[kc_house$bedrooms>5 | kc_house$bedrooms<2,c("price", "bedrooms")])
-
-nrow(kc_house)
-
-for(i in c(0:11, 33))
-  cat(mean(kc_house[kc_house$bedrooms == i,"price"]), nrow(kc_house[kc_house$bedrooms == i,]), " ")
-
-nrow(kc_house[kc_house$bathrooms>3 | kc_house$bathrooms<1,])
-
-kc_house <- kc_house[-(kc_house$bedrooms > 10),]
 # kc_house$bedrooms <- NULL
 
 # kc_house$sqft_basement <- NULL
@@ -144,8 +166,6 @@ kc_house <- kc_house[-(kc_house$bedrooms > 10),]
 
 # kc_house$sqft_lot = NULL
 # kc_house$sqft_lot15 = NULL
-# kc_house$lat = NULL
-# kc_house$long = NULL
 # kc_house$waterfront <- NULL
 
 model <- lm(price ~ . , data = kc_house)
@@ -153,7 +173,10 @@ model <- lm(price ~ . , data = kc_house)
 
 summary(model)
 
-length(levels(kc_house$zipcode))
+# The last item in the output is the **p-value**, which tests the fit of the null hypothesis to our data. 
+# The null hypothesis assumes that there is no relationship between the independent and dependent variables in the model. 
+# The p-value represents the probability you will obtain a result equal to or more extreme than what was actually observed, if the null hypothesis is true. 
+# Generally, if the p-value is very low (below 0.05), it meets threshold to reject the null hypothesis. 
 
 # ==== Test and Evaluation ====
 
