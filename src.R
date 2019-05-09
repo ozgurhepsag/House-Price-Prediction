@@ -1,13 +1,13 @@
 install.packages("pacman")
 library(pacman)
-pacman:: p_load(corrplot, ggplot2, dplyr, caret, lubridate, ggthemes, RColorBrewer)
+pacman:: p_load(corrplot, ggplot2, dplyr, caret, lubridate, ggthemes, RColorBrewer, tidyverse, Metrics)
 
 options(scipen=999)
 
 file_path <- "C:/Users/ABRA/Desktop/CME4403 Introduction to Machine Learning/Project/kc_house_data.csv"
 kc_house <- read.csv(file = file_path, header = TRUE, sep = ",", dec = ".")
 
-# ==== Exploratory Data Analysis ====
+# ==== Exploratory Data Analysis and Visualization ====
 
 # Visualize the data
 head(kc_house)
@@ -28,6 +28,9 @@ hist(kc_house$bathrooms)
 boxplot(kc_house$bathrooms)
 
 hist(kc_house$price)
+
+plot(main = "", density(kc_house$price), col = "blue", xlab = "Distribution of the house price")
+
 hist(log(kc_house$price))
 
 # Percentage of the waterfron = 0
@@ -57,10 +60,12 @@ ggplot(kc_house,aes(x=price))+geom_density(fill="tomato4")
 
 ggplot(kc_house,aes(x=log(price)))+geom_density(fill="tomato4")
 
+ggplot(kc_house,aes(x=sqft_living))+geom_histogram(binwidth=50,fill="tomato")
+
 ggplot(kc_house,aes(x=bathrooms)) + geom_histogram(fill="green4",binwidth=0.5,size=0.1) +
   scale_x_continuous(limits=c(1,8))
 
-ggplot(kc_house, aes(kc_house$zipcode)) + stat_bin(bins = 100, colour="black", fill="green")
+ggplot(kc_house, aes(kc_house$zipcode)) + stat_bin(binwidth=1, colour="black", fill="green")
 
 mycolors = c(brewer.pal(name="Dark2", n = 8), brewer.pal(name="Paired", n = 6))
 
@@ -76,6 +81,9 @@ kc_house %>%
   geom_smooth(method="lm",se=F)+
   labs("title=Bedrooms vs Price")+scale_color_gradientn(colors=mycolors)+theme(legend.position="none")
 
+ggplot(kc_house, aes(yr_built))+geom_histogram(binwidth=5,fill="tomato",alpha=0.5)+
+  scale_x_continuous(limits=c(1900,2016))
+
 ggplot(kc_house, aes(yr_built, price)) +
   geom_smooth(se = FALSE, colour = "dodgerblue3") +
   scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) +
@@ -86,8 +94,7 @@ ggplot(kc_house, aes(yr_built, price)) +
 ggplot(data = kc_house, mapping = aes(x = sqft_living, y = price)) + 
   geom_point(colour = 'red') + geom_smooth(method = 'lm')
 
-
-corr = cor(kc_house[,3:21])
+corr = cor(kc_house[,3:21], method = "pearson")
 corrplot(corr, method = "color", outline = T, cl.pos = 'n', rect.col = "black",  tl.col = "indianred4"
          , addCoef.col = "black", number.digits = 2, number.cex = 0.60, tl.cex = 0.7
          , cl.cex = 1, col = colorRampPalette(c("green4","white","red"))(100))
@@ -125,9 +132,6 @@ kc_house[kc_house$bathrooms > 4.25, 'bathrooms'] <- 4.25
 # kc_house$waterfront <- as.factor(kc_house$waterfront)
 # kc_house$grade <- as.factor(kc_house$grade)
 
-# price <- kc_house$price
-# kc_house$price <- log(kc_house$price)
-
 # No need for id column in this dataset
 kc_house$id <-  NULL 
 
@@ -140,16 +144,24 @@ kc_house$sqft_lot15 <- NULL
 kc_house$lat = NULL
 kc_house$long = NULL
 
-# Changing date to yyyymm format
-# kc_house$date <- substr(kc_house$date, 1, 6)
+# Separate the Date to Year, Month and Day 
+# kc_house <- kc_house %>% 
+#   mutate(Date=str_replace_all(kc_house$date,"T0{1,}","")) %>% 
+#   select(Date,everything(),-date)
 
-# Converting it to numeric as we can only use numeric values for corrleation
-# kc_house$date <- as.numeric(as.character(kc_house$date))
+# kc_house <- kc_house %>% 
+#   mutate(Date=ymd(Date)) %>% 
+#   separate(Date,c("year","month","day"))
 
-# Changing the Date Format for Regression
+# kc_house$year <- as.factor(kc_house$year)
+# kc_house$month <- as.factor(kc_house$month)
+# kc_house$day <- as.factor(kc_house$day)
+
+# Converting Date to numeric for Regression
 kc_house$date <- (substr(kc_house$date, 1, 8))
 kc_house$date <- ymd(kc_house$date)
-kc_house$date <- as.numeric(as.Date(kc_house$date, origin = "2014-04-30"))
+kc_house$date <- as.numeric(as.Date(kc_house$date))
+kc_house$date <- kc_house$date - 16191
 
 kc_house$renovated <- ifelse(kc_house$yr_renovated == 0, 0, 1)
 kc_house$yr_renovated <- NULL
@@ -158,15 +170,6 @@ kc_house$zipcode <- as.factor(kc_house$zipcode)
 
 kc_house$sqft_basement <- ifelse(kc_house$sqft_basement > 0, 1, 0)
 kc_house$above <- NULL
-
-# kc_house$bedrooms <- NULL
-
-# kc_house$sqft_basement <- NULL
-# kc_house$date
-
-# kc_house$sqft_lot = NULL
-# kc_house$sqft_lot15 = NULL
-# kc_house$waterfront <- NULL
 
 model <- lm(price ~ . , data = kc_house)
 # model <- glm(price ~ . , data = kc_house, family = gaussian())
@@ -192,7 +195,7 @@ best_rmse_val <- 0
 iteration_num <- 50
 
 for(i in c(1:iteration_num)){
-  sample <- sample.int(n=nrow(kc_house), size = floor(0.75*nrow(kc_house)), replace = F)
+  sample <- sample.int(n=nrow(kc_house), size = floor(0.70*nrow(kc_house)), replace = F)
   
   # Splitting train and test data
   train <- kc_house[sample, ]
@@ -204,32 +207,38 @@ for(i in c(1:iteration_num)){
   test$pred <- predict(train_model, test)
   act_pred <- data.frame(obs=test$price, pred=test$pred)
   err <- defaultSummary(act_pred)
-
+  err <- as.list(err)
   row_error <- c(0, 0, 0)
   
   for(j in c(1:3)){ # Accumulate the errors
     row_error[j] <- err[j]
   }
   
+  # Find best error results among the iterations
   if(i == 1){
-    best_r2_val <- err[2]
-    best_mae_val <- err[3]
-    best_rmse_val <- err[1]
+    best_r2_val <- as.numeric(err[2])
+    best_mae_val <- as.numeric(err[3])
+    best_rmse_val <- as.numeric(err[1])
     best_r2 <- test
     best_mae <- test
     best_rmse <- test
   }else{
     
-    if(err[1] <  best_rmse_val)
+    if(as.numeric(err[1]) < best_rmse_val){
+      best_rmse_val <- as.numeric(err[1])
       best_rmse <- test
-    
-    if(err[2] >  best_r2_val)
+    }
+    if(as.numeric(err[2]) > best_r2_val){
+      best_r2_val <- as.numeric(err[2])
       best_r2 <- test
-    
-    if(err[3] <  best_mae)
+    }
+    if(as.numeric(err[3]) < best_mae_val){
+      best_mae_val <- as.numeric(err[3])
       best_mae <- test
+    }
   }
   
+  # Keep error results on every iteration
   errors <- rbind(errors, row_error)
   
 }
@@ -252,15 +261,11 @@ ggplot(best_mae,aes(x=price,y=pred)) + geom_point() + geom_abline(color="red")
 ggplot(best_r2,aes(x=price,y=pred)) + geom_point() + geom_abline(color="red")
 
 
-
-
-
 # try the performance of the model by changing the values of the yr_renovated == 0 values with yr_built
 # try the performance of the model by adding new column "is_renovated" (could be tried ignoring the yr_renovated)
 # date formats needs to be compared (e.g. "yyyymm" vs "yyyymmdd")
 # age sold
 # year rennovate 0 or 1, 
-# factor
 
 # https://machinelearningmastery.com/linear-regression-in-r/
 # https://www.machinelearningplus.com/machine-learning/complete-introduction-linear-regression-r/
