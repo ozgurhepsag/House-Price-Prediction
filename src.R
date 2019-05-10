@@ -1,6 +1,7 @@
 install.packages("pacman")
 library(pacman)
-pacman:: p_load(corrplot, ggplot2, dplyr, caret, lubridate, ggthemes, RColorBrewer, tidyverse, Metrics)
+pacman:: p_load(corrplot, ggplot2, dplyr, caret, lubridate, ggthemes, 
+                RColorBrewer, tidyverse, Metrics, randomForest, ranger)
 
 options(scipen=999)
 
@@ -116,13 +117,13 @@ dim(kc_house <- kc_house[-c(8758,15871), ])
 tapply(kc_house$price,kc_house$bedrooms,length)
 tapply(kc_house$price,kc_house$bedrooms,median)
 
-kc_house[kc_house$bedrooms == 10, 'bedrooms'] <- 6
-kc_house[kc_house$bedrooms == 9 | kc_house$bedrooms == 8, 'bedrooms'] <- 7
+# kc_house[kc_house$bedrooms == 10, 'bedrooms'] <- 6
+# kc_house[kc_house$bedrooms == 9 | kc_house$bedrooms == 8, 'bedrooms'] <- 7
+ 
+# tapply(kc_house$price,kc_house$bathrooms,length)
+# tapply(kc_house$price,kc_house$bathrooms,median)
 
-tapply(kc_house$price,kc_house$bathrooms,length)
-tapply(kc_house$price,kc_house$bathrooms,median)
-
-kc_house[kc_house$bathrooms > 4.25, 'bathrooms'] <- 4.25
+# kc_house[kc_house$bathrooms > 4.25, 'bathrooms'] <- 4.25
 
 # kc_house$bedrooms <- as.factor(kc_house$bedrooms)
 # kc_house$bathrooms <- as.factor(kc_house$bathrooms)
@@ -145,17 +146,17 @@ kc_house$lat = NULL
 kc_house$long = NULL
 
 # Separate the Date to Year, Month and Day 
-# kc_house <- kc_house %>% 
-#   mutate(Date=str_replace_all(kc_house$date,"T0{1,}","")) %>% 
-#   select(Date,everything(),-date)
+ kc_house <- kc_house %>% 
+   mutate(Date=str_replace_all(kc_house$date,"T0{1,}","")) %>% 
+   select(Date,everything(),-date)
 
-# kc_house <- kc_house %>% 
-#   mutate(Date=ymd(Date)) %>% 
-#   separate(Date,c("year","month","day"))
+ kc_house <- kc_house %>% 
+   mutate(Date=ymd(Date)) %>% 
+   separate(Date,c("year","month","day"))
 
-# kc_house$year <- as.factor(kc_house$year)
-# kc_house$month <- as.factor(kc_house$month)
-# kc_house$day <- as.factor(kc_house$day)
+kc_house$year <- as.factor(kc_house$year)
+kc_house$month <- as.factor(kc_house$month)
+kc_house$day <- as.factor(kc_house$day)
 
 # Converting Date to numeric for Regression
 kc_house$date <- (substr(kc_house$date, 1, 8))
@@ -172,7 +173,6 @@ kc_house$sqft_basement <- ifelse(kc_house$sqft_basement > 0, 1, 0)
 kc_house$above <- NULL
 
 model <- lm(price ~ . , data = kc_house)
-# model <- glm(price ~ . , data = kc_house, family = gaussian())
 
 summary(model)
 
@@ -253,13 +253,51 @@ avg_mae <- mean(errors$MAE)
 cat("Avarage of Root Mean Squared Error:", avg_rmse, "Avareage of R squared:", avg_r2,
     "Avarage of Mean Absolute Error:", avg_mae)
 
-#Plotting the actual and predicted of the best predictions for the each error types, sometimes they could be same
+# Plotting the actual and predicted of the best predictions for the each error types, sometimes they could be same
 ggplot(best_rmse,aes(x=price,y=pred)) + geom_point() + geom_abline(color="red")
 
 ggplot(best_mae,aes(x=price,y=pred)) + geom_point() + geom_abline(color="red")
 
 ggplot(best_r2,aes(x=price,y=pred)) + geom_point() + geom_abline(color="red")
 
+# Plot error results of each iteration
+ggplot(errors, aes(x=1:iteration_num, y=Rsquared)) + geom_line() + ggtitle("R Squared Error for House Prices") +
+  theme(plot.title = element_text(hjust = 0.5)) + labs(x="Iteration Number")
+
+ggplot(errors, aes(x=1:iteration_num, y=MAE)) + geom_line() + ggtitle("R Squared Error for House Prices") +
+  theme(plot.title = element_text(hjust = 0.5)) + labs(x="Iteration Number")
+
+ggplot(errors, aes(x=1:iteration_num, y=RMSE)) + geom_line() + ggtitle("R Squared Error for House Prices") +
+  theme(plot.title = element_text(hjust = 0.5)) + labs(x="Iteration Number")
+
+
+calculate_rmse <- name <- function(true, predicted) {
+  res <- true - predicted
+  rmse <- sqrt(mean(res^2))
+  return(rmse)
+}
+
+calculate_rsquare <- function(true, predicted) {
+  sse <- sum((predicted - true)^2)
+  sst <- sum((true - mean(true))^2)
+  rsq <- 1 - sse / sst
+  
+  # For this post, impose floor...
+  if (rsq < 0) rsq <- 0
+  
+  return(rsq)
+}
+
+sample_rf <- sample.int(n=nrow(kc_house), size = floor(0.70*nrow(kc_house)), replace = F)
+
+# # Splitting train and test data
+# train_rf <- kc_house[sample, ]
+# test_rf  <- kc_house[-sample, ]
+
+# rf_model <- ranger(price ~ ., train_rf, num.trees = 500, mtry = 6)
+ 
+# rf_model2 <- train(price ~ ., train_rf, method = "rf")
+# rf_model2 <- train(price ~ ., train_rf, method = "ranger")
 
 # try the performance of the model by changing the values of the yr_renovated == 0 values with yr_built
 # try the performance of the model by adding new column "is_renovated" (could be tried ignoring the yr_renovated)
