@@ -1,7 +1,7 @@
 install.packages("pacman")
 library(pacman)
-pacman:: p_load(corrplot, ggplot2, dplyr, caret, lubridate, ggthemes, 
-                RColorBrewer, tidyverse, Metrics, randomForest, ranger)
+pacman:: p_load(corrplot, ggplot2, dplyr, caret, lubridate, ggthemes, e1071, rsample,
+                RColorBrewer, tidyverse, Metrics, randomForest, ranger, pls, h2o)
 
 options(scipen=999)
 
@@ -112,7 +112,7 @@ kc_house[kc_house$bedrooms == 33, ]
 kc_house[kc_house$bedrooms == 9, ] 
 
 # Remove them
-dim(kc_house <- kc_house[-c(8758,15871), ])
+kc_house <- kc_house[-c(8758,15871), ]
 
 tapply(kc_house$price,kc_house$bedrooms,length)
 tapply(kc_house$price,kc_house$bedrooms,median)
@@ -125,25 +125,14 @@ tapply(kc_house$price,kc_house$bedrooms,median)
 
 # kc_house[kc_house$bathrooms > 4.25, 'bathrooms'] <- 4.25
 
-# kc_house$bedrooms <- as.factor(kc_house$bedrooms)
-# kc_house$bathrooms <- as.factor(kc_house$bathrooms)
-# kc_house$floors <- as.factor(kc_house$floors)
-# kc_house$condition <- as.factor(kc_house$condition)
-# kc_house$view <- as.factor(kc_house$view)
-# kc_house$waterfront <- as.factor(kc_house$waterfront)
-# kc_house$grade <- as.factor(kc_house$grade)
-
 # No need for id column in this dataset
 kc_house$id <-  NULL 
-
-# Sqft_living = sqft_above + sqft_basement, 
-# hence, information in sqft_above and sqft_basement are redundant and not needed for analysis.
 kc_house$sqft_living15 <- NULL
 kc_house$sqft_lot15 <- NULL
 
 # zipcode is directly connected to latitude and longitude, so only zipcode will be fine.
-kc_house$lat = NULL
-kc_house$long = NULL
+# kc_house$lat = NULL
+# kc_house$long = NULL
 
 # Separate the Date to Year, Month and Day 
  kc_house <- kc_house %>% 
@@ -159,21 +148,22 @@ kc_house$month <- as.factor(kc_house$month)
 kc_house$day <- as.factor(kc_house$day)
 
 # Converting Date to numeric for Regression
-kc_house$date <- (substr(kc_house$date, 1, 8))
-kc_house$date <- ymd(kc_house$date)
-kc_house$date <- as.numeric(as.Date(kc_house$date))
-kc_house$date <- kc_house$date - 16191
+# kc_house$date <- (substr(kc_house$date, 1, 8))
+# kc_house$date <- ymd(kc_house$date)
+# kc_house$date <- as.numeric(as.Date(kc_house$date))
+# kc_house$date <- kc_house$date - 16191
 
 kc_house$renovated <- ifelse(kc_house$yr_renovated == 0, 0, 1)
 kc_house$yr_renovated <- NULL
 
 kc_house$zipcode <- as.factor(kc_house$zipcode)
 
+# Sqft_living = sqft_above + sqft_basement, 
+# hence, information in sqft_above and sqft_basement are redundant and not needed for analysis.
 kc_house$sqft_basement <- ifelse(kc_house$sqft_basement > 0, 1, 0)
-kc_house$above <- NULL
+kc_house$sqft_above <- NULL
 
 model <- lm(price ~ . , data = kc_house)
-
 summary(model)
 
 # The last item in the output is the **p-value**, which tests the fit of the null hypothesis to our data. 
@@ -182,6 +172,7 @@ summary(model)
 # Generally, if the p-value is very low (below 0.05), it meets threshold to reject the null hypothesis. 
 
 # ==== Test and Evaluation ====
+# ==== Linear Regression ====
 
 # [1] RMSE, [2] R2, [3] MAE
 errors <- data.frame() 
@@ -195,17 +186,18 @@ best_rmse_val <- 0
 iteration_num <- 50
 
 for(i in c(1:iteration_num)){
-  sample <- sample.int(n=nrow(kc_house), size = floor(0.70*nrow(kc_house)), replace = F)
+  
+  sample <- sample.int(n=nrow(kc_house), size = floor(0.75*nrow(kc_house)), replace = F)
   
   # Splitting train and test data
-  train <- kc_house[sample, ]
-  test  <- kc_house[-sample, ]
-  train_model <- lm(price ~ . , data = train)
+  train_lr <- kc_house[sample, ]
+  test_lr <- kc_house[-sample, ]
+  train_model <- lm(price ~ . , data = train_lr)
   
   summary(train_model)
   
-  test$pred <- predict(train_model, test)
-  act_pred <- data.frame(obs=test$price, pred=test$pred)
+  test_lr$pred <- predict(train_model, test_lr)
+  act_pred <- data.frame(obs=test_lr$price, pred=test_lr$pred)
   err <- defaultSummary(act_pred)
   err <- as.list(err)
   row_error <- c(0, 0, 0)
@@ -219,28 +211,27 @@ for(i in c(1:iteration_num)){
     best_r2_val <- as.numeric(err[2])
     best_mae_val <- as.numeric(err[3])
     best_rmse_val <- as.numeric(err[1])
-    best_r2 <- test
-    best_mae <- test
-    best_rmse <- test
+    best_r2 <- test_lr
+    best_mae <- test_lr
+    best_rmse <- test_lr
   }else{
     
     if(as.numeric(err[1]) < best_rmse_val){
       best_rmse_val <- as.numeric(err[1])
-      best_rmse <- test
+      best_rmse <- test_lr
     }
     if(as.numeric(err[2]) > best_r2_val){
       best_r2_val <- as.numeric(err[2])
-      best_r2 <- test
+      best_r2 <- test_lr
     }
     if(as.numeric(err[3]) < best_mae_val){
       best_mae_val <- as.numeric(err[3])
-      best_mae <- test
+      best_mae <- test_lr
     }
   }
   
   # Keep error results on every iteration
   errors <- rbind(errors, row_error)
-  
 }
 
 names(errors) <- c("RMSE", "Rsquared", "MAE")
@@ -264,14 +255,14 @@ ggplot(best_r2,aes(x=price,y=pred)) + geom_point() + geom_abline(color="red")
 ggplot(errors, aes(x=1:iteration_num, y=Rsquared)) + geom_line() + ggtitle("R Squared Error for House Prices") +
   theme(plot.title = element_text(hjust = 0.5)) + labs(x="Iteration Number")
 
-ggplot(errors, aes(x=1:iteration_num, y=MAE)) + geom_line() + ggtitle("R Squared Error for House Prices") +
+ggplot(errors, aes(x=1:iteration_num, y=MAE)) + geom_line() + ggtitle("MAE for House Prices") +
   theme(plot.title = element_text(hjust = 0.5)) + labs(x="Iteration Number")
 
-ggplot(errors, aes(x=1:iteration_num, y=RMSE)) + geom_line() + ggtitle("R Squared Error for House Prices") +
+ggplot(errors, aes(x=1:iteration_num, y=RMSE)) + geom_line() + ggtitle("RMSE for House Prices") +
   theme(plot.title = element_text(hjust = 0.5)) + labs(x="Iteration Number")
 
 
-calculate_rmse <- name <- function(true, predicted) {
+calculate_rmse <- function(true, predicted) {
   res <- true - predicted
   rmse <- sqrt(mean(res^2))
   return(rmse)
@@ -283,27 +274,205 @@ calculate_rsquare <- function(true, predicted) {
   rsq <- 1 - sse / sst
   
   # For this post, impose floor...
-  if (rsq < 0) rsq <- 0
+  if (rsq < 0) 
+    rsq <- 0
   
   return(rsq)
 }
 
+
+# ==== Random Forest ====
+
+# One hot encoding for "zipcode" feature. 
+# Because, randomForest funtion does not work with the feature that has more than 53 categories.
+temp <- as.data.frame(kc_house$zipcode)
+names(temp) <- "strcol"
+
+for(level in unique(temp$strcol)){
+  kc_house[paste("is", level, sep = "_")] <- ifelse(temp$strcol == level, 1, 0)
+}
+
+zipcode <- kc_house$zipcode
+kc_house$zipcode <- NULL
+
+feature_names <- setdiff(names(kc_house), "price")
+
 sample_rf <- sample.int(n=nrow(kc_house), size = floor(0.70*nrow(kc_house)), replace = F)
 
-# # Splitting train and test data
-# train_rf <- kc_house[sample, ]
-# test_rf  <- kc_house[-sample, ]
+# Splitting train and test data
+train_rf <- kc_house[sample_rf, ]
+test_rf  <- kc_house[-sample_rf, ]
 
-# rf_model <- ranger(price ~ ., train_rf, num.trees = 500, mtry = 6)
- 
-# rf_model2 <- train(price ~ ., train_rf, method = "rf")
-# rf_model2 <- train(price ~ ., train_rf, method = "ranger")
+#rf_model <- ranger(price ~ ., train_rf, num.trees = 700, mtry = floor(length(feature_names) / 3))
+rf_model <- randomForest(price ~ ., train_rf, ntree = 500, mtry = floor(length(feature_names) / 3), importance = T)
+plot(rf_model)
 
-# try the performance of the model by changing the values of the yr_renovated == 0 values with yr_built
-# try the performance of the model by adding new column "is_renovated" (could be tried ignoring the yr_renovated)
-# date formats needs to be compared (e.g. "yyyymm" vs "yyyymmdd")
-# age sold
-# year rennovate 0 or 1, 
+predictions_rf <- predict(rf_model, test_rf)
+# test_rf$pred <- predictions_rf$predictions
+test_rf$pred <- predictions_rf
+act_pred <- data.frame(obs=test_rf$price, pred=test_rf$pred)
+err <- defaultSummary(act_pred)
+err <- as.list(err)
 
-# https://machinelearningmastery.com/linear-regression-in-r/
-# https://www.machinelearningplus.com/machine-learning/complete-introduction-linear-regression-r/
+print(err)
+summary(rf_model)
+importance(rf_model)
+varImpPlot(rf_model,type=2)
+
+# names of features
+features_for_tune <- setdiff(names(train_rf), "price")
+
+m2 <- tuneRF(
+  x          = train_rf[features_for_tune],
+  y          = train_rf$price,
+  ntreeTry   = 500,
+  mtryStart  = 5,
+  stepFactor = 1,
+  improve    = 0.01,
+  trace      = T      # to not show real-time progress 
+)
+
+hyper_grid <- expand.grid(
+  mtry       = seq(20, 60, by = 2),
+  node_size  = seq(3, 9, by = 2),
+  sampe_size = c(.55, .632, .70, .75, .80),
+  OOB_RMSE   = 0
+)
+
+# total number of combinations
+nrow(hyper_grid)
+
+for(i in 1:nrow(hyper_grid)) {
+  
+  # train model
+  model <- ranger(
+    formula         = price ~ ., 
+    data            = train_rf, 
+    num.trees       = 500,
+    mtry            = hyper_grid$mtry[i],
+    min.node.size   = hyper_grid$node_size[i],
+    sample.fraction = hyper_grid$sampe_size[i]
+  )
+  
+  cat(i, " ")
+  
+  # add OOB error to grid
+  hyper_grid$OOB_RMSE[i] <- sqrt(model$prediction.error)
+}
+
+hyper_grid %>% 
+  dplyr::arrange(OOB_RMSE) %>%
+  head(10)
+
+# ==== SVR ====
+
+sample <- sample.int(n=nrow(kc_house), size = floor(0.70*nrow(kc_house)), replace = F)
+
+# Splitting train and test data
+train <- kc_house[sample, ]
+test  <- kc_house[-sample, ]
+
+
+#create svr model
+train_model <- svm(price ~ . , data = train, kernel = "radial", epsilon = 1, cost = 2^3)
+summary(train_model)
+predictPricesvm <- predict(train_model, test)  ##train model predicting the test data
+error <- test$price - predictPricesvm  ## basic error of the model to  the test data
+svrPredictionRMSE <- rmse(test$price,predictPricesvm)  ##rmse of the model to the test data
+print(svrPredictionRMSE)
+#now,
+#tuning the model, hyperparameter optimization
+#The standard way of doing it is by doing a grid search.
+#It means we will train a lot of models for the different couples of ϵ and cost, and choose the best one.
+
+#the tuneResult returns the MSE, don't forget to convert it to RMSE before comparing the value to our previous model.
+# we use the tune method to train models with ϵ=0,0.1,0.2,...,1  
+#and cost = 2^2,2^3,2^4,...,2^9 which means it will train  88 models (it can take a long time)
+
+hyper_grid <- expand.grid(
+  epsilon    = seq(0, 1, by = 0.1),
+  cost       = 2^(2:9),
+  RMSE       = 0,
+  MAE        = 0,
+  Rsquared   = 0
+)
+
+# total number of combinations
+nrow(hyper_grid)
+
+for(i in 1:nrow(hyper_grid)) {
+  
+  fold_num <- 10
+  
+  #Randomly shuffle the data
+  temp <- kc_house[sample(nrow(kc_house)),]
+  
+  #Create 10 equally size folds
+  folds <- cut(seq(1,nrow(temp)),breaks=fold_num,labels=FALSE)
+  
+  rmse_total <- 0
+  r2_total <- 0 
+  mae_total <- 0
+  
+  #Perform 10 fold cross validation
+  for(j in 1:fold_num){
+    
+    cat(i, ".iter ", j, ".jiter ")
+    
+    #Segement your data by fold using the which() function 
+    testIndexes <- which(folds==j,arr.ind=TRUE)
+    testData <- temp[testIndexes, ]
+    trainData <- temp[-testIndexes, ]
+    
+    # train model
+    model_svm <- svm(
+      formula         = price ~ ., 
+      data            = trainData, 
+      kernel          = "radial",
+      epsilon         = hyper_grid$epsilon[i],
+      cost            = hyper_grid$cost[i]
+    )
+    
+    predictions <- predict(model_svm, testData)
+
+    act_pred <- data.frame(obs=testData$price, pred=predictions)
+    err <- defaultSummary(act_pred)
+    err <- as.list(err)
+
+    rmse_total <- rmse_total + as.numeric(err[1])
+    r2_total <- r2_total + as.numeric(err[2])
+    mae_total <- mae_total + as.numeric(err[3])
+    
+    print(err)
+  }
+  
+  # add errors to grid
+  hyper_grid$RMSE[i] <- rmse_total / fold_num
+  hyper_grid$MAE[i] <- mae_total / fold_num
+  hyper_grid$Rsquared[i] <- r2_total / fold_num
+}
+
+hyper_grid %>% 
+  dplyr::arrange(RMSE) %>%
+  head(10)
+
+hyper_grid %>% 
+  dplyr::arrange(MAE) %>%
+  head(10)
+
+hyper_grid %>% 
+  dplyr::arrange(R2) %>%
+  head(10)
+
+# perform a grid search
+tuneResult <- tune(svm, price ~ . ,  data = train,
+                   ranges = list(epsilon = seq(0,0.2,0.1), cost = 2^(2:3))
+)
+#The γ (gama) has to be tuned to better fit the hyperplane to the data. 
+#It is responsible for the linearity degree of the hyperplane, and for that, it is not present when using linear kernels.
+
+print(tuneResult)
+# Draw the tuning graph
+plot(tuneResult)
+
+train_control <- trainControl(method="cv", number=10)
