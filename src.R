@@ -1,7 +1,7 @@
 install.packages("pacman")
 library(pacman)
 pacman:: p_load(corrplot, ggplot2, dplyr, caret, lubridate, ggthemes, e1071, rsample,
-                RColorBrewer, tidyverse, Metrics, randomForest, ranger, pls, h2o)
+                RColorBrewer, tidyverse, Metrics, randomForest, ranger, pls, class, chemometrics)
 
 options(scipen=999)
 
@@ -394,6 +394,43 @@ plot(tuneResult)
 
 train_control <- trainControl(method="cv", number=10)
 
+# ==== KNN Regression ====
+
+iteration_num <- 100
+k_interval <- 200
+
+knn_rmse <- numeric(k_interval)
+knn_rsquared <- numeric(k_interval)
+knn_mae <- numeric(k_interval)
+
+
+for(i in 1:iteration_num){
+  cat(i, " ") # REMOVE
+  sample_knn <- sample.int(n=nrow(kc_house), size = floor(0.70*nrow(kc_house)), replace = F)
+  train_knn <- kc_house[sample_knn, ]
+  test_knn  <- kc_house[-sample_knn, ]
+  
+  for(j in 1:k_interval){
+    model_knn <- knnreg(price ~ ., train_knn, k = j)
+    predictions_knn <- predict(model_knn, test_knn)
+    
+    act_pred <- data.frame(obs=test_knn$price, pred=predictions_knn)
+    err <- defaultSummary(act_pred)
+    err <- as.list(err)
+    
+    knn_rmse[j] <- knn_rmse[j] + as.numeric(err[1])
+    knn_rsquared[j] <- knn_rsquared[j] + as.numeric(err[2])
+    knn_mae[j] <- knn_mae[j] + as.numeric(err[3])
+  }
+}
+
+knn_rmse[j] <- knn_rmse[j] / iteration_num
+knn_rsquared[j] <- knn_rsquared[j] / iteration_num
+knn_mae[j] <- knn_mae[j] / iteration_num
+
+plot(knn_rmse, type = "l", ylab="R Squared",xlab="K",main="R Squared Errors for Smarket With Varying K Values (1-50)")
+
+
 # ==== Random Forest ====
 
 # One hot encoding for "zipcode" feature. 
@@ -417,8 +454,13 @@ train_rf <- kc_house[sample_rf, ]
 test_rf  <- kc_house[-sample_rf, ]
 
 #rf_model <- ranger(price ~ ., train_rf, num.trees = 700, mtry = floor(length(feature_names) / 3))
-rf_model <- randomForest(price ~ ., train_rf, ntree = 500, mtry = floor(length(feature_names) / 3))
+rf_model <- randomForest(price ~ ., train_rf, ntree = 200, mtry = floor(length(feature_names) / 3), 
+                         sampsize = ceiling(.8*nrow(train_rf)), importance = T)
+rf_model2 <- randomForest(price ~ ., train_rf, ntree = 700, mtry = floor(length(feature_names) / 3))
+
 plot(rf_model)
+rf_model
+plot(rf_model2)
 
 predictions_rf <- predict(rf_model, test_rf)
 # test_rf$pred <- predictions_rf$predictions
@@ -446,10 +488,11 @@ m2 <- tuneRF(
 )
 
 hyper_grid <- expand.grid(
-  mtry       = seq(20, 65, by = 1),
+  mtry       = seq(15, 65, by = 2),
   node_size  = seq(2, 9, by = 1),
-  sampe_size = c(.632, .70, .75, .80),
-  OOB_RMSE   = 0
+  sample_size = c(.632, .75, .80),
+  OOB_RMSE   = 0,
+  OOB_Rsquared = 0
 )
 
 # total number of combinations
@@ -464,24 +507,31 @@ for(i in 1:nrow(hyper_grid)) {
     num.trees       = 300,
     mtry            = hyper_grid$mtry[i],
     min.node.size   = hyper_grid$node_size[i],
-    sample.fraction = hyper_grid$sampe_size[i]
+    sample.fraction = hyper_grid$sample_size[i]
   )
   
-  cat(i, " ")
+  cat(i, " ") # REMOVE
   
-  # add OOB error to grid
+  # Add OOB error to grid
   hyper_grid$OOB_RMSE[i] <- sqrt(model_ranger$prediction.error)
+  hyper_grid$OOB_Rsquared[i] <- model_ranger$r.squared
 }
 
 hyper_grid %>% 
   dplyr::arrange(OOB_RMSE) %>%
   head(10)
 
+hyper_grid %>% 
+  dplyr::arrange(OOB_Rsquared) %>%
+  head(10)
+
+# New grid search to compare OOB Error and test errors (R2, MAE, RMSE)
 grid_search <- expand.grid(
-  mtry       = seq(20, 65, by = 1),
+  mtry       = seq(15, 65, by = 2),
   node_size  = seq(2, 9, by = 1),
-  sampe_size = c(.632, .75, .80),
+  sample_size = c(.632, .75, .80),
   OOB_RMSE   = 0,
+  OOB_Rsquared = 0,
   RMSE       = 0,
   MAE        = 0,
   Rsquared   = 0
@@ -503,11 +553,12 @@ for(i in 1:nrow(grid_search)) {
   r2_total <- 0 
   mae_total <- 0
   oob_rmse_total <- 0
+  oob_rsquared_total <- 0
   
   #Perform 10 fold cross validation
   for(j in 1:fold_num){
     
-    cat(i, ".iter ", j, ".jiter ")
+    cat(i, ".iter ", j, ".jiter ") # REMOVE
     
     #Segement your data by fold using the which() function 
     testIndexes <- which(folds==j,arr.ind=TRUE)
@@ -521,25 +572,27 @@ for(i in 1:nrow(grid_search)) {
       num.trees       = 300,
       mtry            = grid_search$mtry[i],
       min.node.size   = grid_search$node_size[i],
-      sample.fraction = grid_search$sampe_size[i]
+      sample.fraction = grid_search$sample_size[i]
     )
     
     predictions <- predict(model_ran, testData)
     
-    act_pred <- data.frame(obs=testData$price, pred=predictions)
+    act_pred <- data.frame(obs=testData$price, pred=predictions$predictions)
     err <- defaultSummary(act_pred)
     err <- as.list(err)
     
     oob_rmse_total <- oob_rmse_total + sqrt(model_ran$prediction.error)
+    oob_rsquared_total <- oob_rsquared_total + model_ran$r.squared
     rmse_total <- rmse_total + as.numeric(err[1])
     r2_total <- r2_total + as.numeric(err[2])
     mae_total <- mae_total + as.numeric(err[3])
     
-    print(err)
+    print(err) # REMOVE
   }
   
   # add errors to grid
   grid_search$OOB_RMSE[i] <- oob_rmse_total / fold_num
+  grid_search$OOB_Rsquared[i] <- oob_rsquared_total / fold_num
   grid_search$RMSE[i] <- rmse_total / fold_num
   grid_search$MAE[i] <- mae_total / fold_num
   grid_search$Rsquared[i] <- r2_total / fold_num
@@ -548,3 +601,16 @@ for(i in 1:nrow(grid_search)) {
 grid_search %>% 
   dplyr::arrange(RMSE) %>%
   head(10)
+
+grid_search %>% 
+  dplyr::arrange(Rsquared) %>%
+  head(10)
+
+grid_search %>% 
+  dplyr::arrange(MAE) %>%
+  head(10)
+
+grid_search %>% 
+  dplyr::arrange(OOB_RMSE) %>%
+  head(10)
+
