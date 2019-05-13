@@ -281,89 +281,6 @@ calculate_rsquare <- function(true, predicted) {
 }
 
 
-# ==== Random Forest ====
-
-# One hot encoding for "zipcode" feature. 
-# Because, randomForest funtion does not work with the feature that has more than 53 categories.
-temp <- as.data.frame(kc_house$zipcode)
-names(temp) <- "strcol"
-
-for(level in unique(temp$strcol)){
-  kc_house[paste("is", level, sep = "_")] <- ifelse(temp$strcol == level, 1, 0)
-}
-
-zipcode <- kc_house$zipcode
-kc_house$zipcode <- NULL
-
-feature_names <- setdiff(names(kc_house), "price")
-
-sample_rf <- sample.int(n=nrow(kc_house), size = floor(0.70*nrow(kc_house)), replace = F)
-
-# Splitting train and test data
-train_rf <- kc_house[sample_rf, ]
-test_rf  <- kc_house[-sample_rf, ]
-
-#rf_model <- ranger(price ~ ., train_rf, num.trees = 700, mtry = floor(length(feature_names) / 3))
-rf_model <- randomForest(price ~ ., train_rf, ntree = 500, mtry = floor(length(feature_names) / 3), importance = T)
-plot(rf_model)
-
-predictions_rf <- predict(rf_model, test_rf)
-# test_rf$pred <- predictions_rf$predictions
-test_rf$pred <- predictions_rf
-act_pred <- data.frame(obs=test_rf$price, pred=test_rf$pred)
-err <- defaultSummary(act_pred)
-err <- as.list(err)
-
-print(err)
-summary(rf_model)
-importance(rf_model)
-varImpPlot(rf_model,type=2)
-
-# names of features
-features_for_tune <- setdiff(names(train_rf), "price")
-
-m2 <- tuneRF(
-  x          = train_rf[features_for_tune],
-  y          = train_rf$price,
-  ntreeTry   = 500,
-  mtryStart  = 5,
-  stepFactor = 1,
-  improve    = 0.01,
-  trace      = T      # to not show real-time progress 
-)
-
-hyper_grid <- expand.grid(
-  mtry       = seq(20, 60, by = 2),
-  node_size  = seq(3, 9, by = 2),
-  sampe_size = c(.55, .632, .70, .75, .80),
-  OOB_RMSE   = 0
-)
-
-# total number of combinations
-nrow(hyper_grid)
-
-for(i in 1:nrow(hyper_grid)) {
-  
-  # train model
-  model <- ranger(
-    formula         = price ~ ., 
-    data            = train_rf, 
-    num.trees       = 500,
-    mtry            = hyper_grid$mtry[i],
-    min.node.size   = hyper_grid$node_size[i],
-    sample.fraction = hyper_grid$sampe_size[i]
-  )
-  
-  cat(i, " ")
-  
-  # add OOB error to grid
-  hyper_grid$OOB_RMSE[i] <- sqrt(model$prediction.error)
-}
-
-hyper_grid %>% 
-  dplyr::arrange(OOB_RMSE) %>%
-  head(10)
-
 # ==== SVR ====
 
 sample <- sample.int(n=nrow(kc_house), size = floor(0.70*nrow(kc_house)), replace = F)
@@ -476,3 +393,158 @@ print(tuneResult)
 plot(tuneResult)
 
 train_control <- trainControl(method="cv", number=10)
+
+# ==== Random Forest ====
+
+# One hot encoding for "zipcode" feature. 
+# Because, randomForest funtion does not work with the feature that has more than 53 categories.
+temp <- as.data.frame(kc_house$zipcode)
+names(temp) <- "strcol"
+
+for(level in unique(temp$strcol)){
+  kc_house[paste("is", level, sep = "_")] <- ifelse(temp$strcol == level, 1, 0)
+}
+
+zipcode <- kc_house$zipcode
+kc_house$zipcode <- NULL
+
+feature_names <- setdiff(names(kc_house), "price")
+
+sample_rf <- sample.int(n=nrow(kc_house), size = floor(0.70*nrow(kc_house)), replace = F)
+
+# Splitting train and test data
+train_rf <- kc_house[sample_rf, ]
+test_rf  <- kc_house[-sample_rf, ]
+
+#rf_model <- ranger(price ~ ., train_rf, num.trees = 700, mtry = floor(length(feature_names) / 3))
+rf_model <- randomForest(price ~ ., train_rf, ntree = 500, mtry = floor(length(feature_names) / 3))
+plot(rf_model)
+
+predictions_rf <- predict(rf_model, test_rf)
+# test_rf$pred <- predictions_rf$predictions
+test_rf$pred <- predictions_rf
+act_pred <- data.frame(obs=test_rf$price, pred=test_rf$pred)
+err <- defaultSummary(act_pred)
+err <- as.list(err)
+
+print(err)
+summary(rf_model)
+importance(rf_model)
+varImpPlot(rf_model,type=2)
+
+# names of features
+features_for_tune <- setdiff(names(train_rf), "price")
+
+m2 <- tuneRF(
+  x          = train_rf[features_for_tune],
+  y          = train_rf$price,
+  ntreeTry   = 500,
+  mtryStart  = 5,
+  stepFactor = 0.5,
+  improve    = 0.01,
+  trace      = T      # to not show real-time progress 
+)
+
+hyper_grid <- expand.grid(
+  mtry       = seq(20, 65, by = 1),
+  node_size  = seq(2, 9, by = 1),
+  sampe_size = c(.632, .70, .75, .80),
+  OOB_RMSE   = 0
+)
+
+# total number of combinations
+nrow(hyper_grid)
+
+for(i in 1:nrow(hyper_grid)) {
+  
+  # train model
+  model_ranger <- ranger(
+    formula         = price ~ ., 
+    data            = kc_house, 
+    num.trees       = 300,
+    mtry            = hyper_grid$mtry[i],
+    min.node.size   = hyper_grid$node_size[i],
+    sample.fraction = hyper_grid$sampe_size[i]
+  )
+  
+  cat(i, " ")
+  
+  # add OOB error to grid
+  hyper_grid$OOB_RMSE[i] <- sqrt(model_ranger$prediction.error)
+}
+
+hyper_grid %>% 
+  dplyr::arrange(OOB_RMSE) %>%
+  head(10)
+
+grid_search <- expand.grid(
+  mtry       = seq(20, 65, by = 1),
+  node_size  = seq(2, 9, by = 1),
+  sampe_size = c(.632, .75, .80),
+  OOB_RMSE   = 0,
+  RMSE       = 0,
+  MAE        = 0,
+  Rsquared   = 0
+)
+
+nrow(grid_search)
+
+fold_num <- 10
+
+for(i in 1:nrow(grid_search)) {
+  
+  #Randomly shuffle the data
+  temp <- kc_house[sample(nrow(kc_house)),]
+  
+  #Create 10 equally size folds
+  folds <- cut(seq(1,nrow(temp)),breaks=fold_num,labels=FALSE)
+  
+  rmse_total <- 0
+  r2_total <- 0 
+  mae_total <- 0
+  oob_rmse_total <- 0
+  
+  #Perform 10 fold cross validation
+  for(j in 1:fold_num){
+    
+    cat(i, ".iter ", j, ".jiter ")
+    
+    #Segement your data by fold using the which() function 
+    testIndexes <- which(folds==j,arr.ind=TRUE)
+    testData <- temp[testIndexes, ]
+    trainData <- temp[-testIndexes, ]
+    
+    # train model
+    model_ran <- ranger(
+      formula         = price ~ ., 
+      data            = trainData, 
+      num.trees       = 300,
+      mtry            = grid_search$mtry[i],
+      min.node.size   = grid_search$node_size[i],
+      sample.fraction = grid_search$sampe_size[i]
+    )
+    
+    predictions <- predict(model_ran, testData)
+    
+    act_pred <- data.frame(obs=testData$price, pred=predictions)
+    err <- defaultSummary(act_pred)
+    err <- as.list(err)
+    
+    oob_rmse_total <- oob_rmse_total + sqrt(model_ran$prediction.error)
+    rmse_total <- rmse_total + as.numeric(err[1])
+    r2_total <- r2_total + as.numeric(err[2])
+    mae_total <- mae_total + as.numeric(err[3])
+    
+    print(err)
+  }
+  
+  # add errors to grid
+  grid_search$OOB_RMSE[i] <- oob_rmse_total / fold_num
+  grid_search$RMSE[i] <- rmse_total / fold_num
+  grid_search$MAE[i] <- mae_total / fold_num
+  grid_search$Rsquared[i] <- r2_total / fold_num
+}
+
+grid_search %>% 
+  dplyr::arrange(RMSE) %>%
+  head(10)
