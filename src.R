@@ -4,7 +4,7 @@ pacman:: p_load(corrplot, ggplot2, dplyr, caret, lubridate, ggthemes, e1071, rsa
                 RColorBrewer, tidyverse, Metrics, randomForest, ranger, pls, h2o)
 options(scipen=999)
 
-file_path <- "C://Users//cadob//OneDrive//Masa�st�//kc_house_data.csv"
+file_path <- "C://Users//cadob//OneDrive//Masaüstü//kc_house_data.csv"
 kc_house <- read.csv(file = file_path, header = TRUE, sep = ",", dec = ".")
 
 # ==== Exploratory Data Analysis and Visualization ====
@@ -193,10 +193,10 @@ svrPredictionRMSE <- rmse(test$price,predictPricesvm)  ##rmse of the model to th
 #now,
 #tuning the model, hyperparameter optimization
 #The standard way of doing it is by doing a grid search.
-#It means we will train a lot of models for the different couples of ϵ and cost, and choose the best one.
+#It means we will train a lot of models for the different couples of Ïµ and cost, and choose the best one.
 
 #the tuneResult returns the MSE, don't forget to convert it to RMSE before comparing the value to our previous model.
-# we use the tune method to train models with ϵ=0,0.1,0.2,...,1  
+# we use the tune method to train models with Ïµ=0,0.1,0.2,...,1  
 #and cost = 2^2,2^3,2^4,...,2^9 which means it will train  88 models (it can take a long time)
 
 
@@ -253,7 +253,7 @@ for(i in 1:nrow(hyper_grid_for_radial)) {
   
   
   #Randomly shuffle the data
-  temp <- cars[sample(nrow(cars)),]
+  temp <- kc_house[sample(nrow(kc_house)),]
   
   #Create 5 equally size folds
   folds <- cut(seq(1,nrow(temp)),breaks=fold_num,labels=FALSE)
@@ -274,7 +274,7 @@ for(i in 1:nrow(hyper_grid_for_radial)) {
     
     # train model
     model_svm <- svm(
-      formula         = dist ~ .,  ##target
+      formula         = price ~ .,  ##target
       data            = trainData, 
       kernel          = "radial",
       epsilon         = hyper_grid_for_radial$epsilon[i],
@@ -284,7 +284,7 @@ for(i in 1:nrow(hyper_grid_for_radial)) {
     
     predictions <- predict(model_svm, testData)  ##train model predicting the test data
     
-    act_pred <- data.frame(obs=testData$dist, pred=predictions)
+    act_pred <- data.frame(obs=testData$price, pred=predictions)
     err <- defaultSummary(act_pred)
     err <- as.list(err)
     
@@ -326,7 +326,7 @@ if(q==2) { # kernel = polynomial
     
 
     #Randomly shuffle the data
-    temp <- cars[sample(nrow(cars)),]
+    temp <- kc_house[sample(nrow(kc_house)),]
     
     #Create 5 equally size folds
     folds <- cut(seq(1,nrow(temp)),breaks=fold_num,labels=FALSE)
@@ -347,7 +347,7 @@ if(q==2) { # kernel = polynomial
       
       # train model
       model_svm <- svm(
-        formula         = dist ~ .,  ##target
+        formula         = price ~ .,  ##target
         data            = trainData, 
         kernel          = "polynomial",
         epsilon         = hyper_grid_for_polynomial$epsilon[i],
@@ -358,7 +358,7 @@ if(q==2) { # kernel = polynomial
       
       predictions <- predict(model_svm, testData)  ##train model predicting the test data
       
-      act_pred <- data.frame(obs=testData$dist, pred=predictions)
+      act_pred <- data.frame(obs=testData$price, pred=predictions)
       err <- defaultSummary(act_pred)
       err <- as.list(err)
       
@@ -399,7 +399,7 @@ if(q==2) { # kernel = polynomial
       
 
       #Randomly shuffle the data
-      temp <- cars[sample(nrow(cars)),]
+      temp <- kc_house[sample(nrow(kc_house)),]
       
       #Create 5 equally size folds
       folds <- cut(seq(1,nrow(temp)),breaks=fold_num,labels=FALSE)
@@ -420,7 +420,7 @@ if(q==2) { # kernel = polynomial
         
         # train model
         model_svm <- svm(
-          formula         = dist ~ .,  ##target
+          formula         = price ~ .,  ##target
           data            = trainData, 
           kernel          = "linear",
           epsilon         = hyper_grid_for_linear$epsilon[i],
@@ -430,7 +430,7 @@ if(q==2) { # kernel = polynomial
         
         predictions <- predict(model_svm, testData)  ##train model predicting the test data
         
-        act_pred <- data.frame(obs=testData$dist, pred=predictions)
+        act_pred <- data.frame(obs=testData$price, pred=predictions)
         err <- defaultSummary(act_pred)
         err <- as.list(err)
         
@@ -465,7 +465,7 @@ if(q==2) { # kernel = polynomial
   
 }
 
-#The γ (gama) has to be tuned to better fit the hyperplane to the data. 
+#The Î³ (gama) has to be tuned to better fit the hyperplane to the data. 
 #It is responsible for the linearity degree of the hyperplane, and for that, it is not present when using linear kernels.
 
 
