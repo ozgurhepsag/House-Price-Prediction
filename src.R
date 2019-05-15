@@ -283,126 +283,156 @@ calculate_rsquare <- function(true, predicted) {
 
 # ==== SVR ====
 
-sample <- sample.int(n=nrow(kc_house), size = floor(0.70*nrow(kc_house)), replace = F)
+##GRID SEARCHING TO TUNING OUR MODEL TO SEE BEST HYPERPARAMETERS FOR BOTH OF 3(RADIAL,POLYNOMIAL,LINEAR) KERNELS.
 
-# Splitting train and test data
-train <- kc_house[sample, ]
-test  <- kc_house[-sample, ]
-
-
-#create svr model
-train_model <- svm(price ~ . , data = train, kernel = "radial", epsilon = 1, cost = 2^3)
-summary(train_model)
-predictPricesvm <- predict(train_model, test)  ##train model predicting the test data
-error <- test$price - predictPricesvm  ## basic error of the model to  the test data
-svrPredictionRMSE <- rmse(test$price,predictPricesvm)  ##rmse of the model to the test data
-print(svrPredictionRMSE)
-#now,
-#tuning the model, hyperparameter optimization
-#The standard way of doing it is by doing a grid search.
-#It means we will train a lot of models for the different couples of ϵ and cost, and choose the best one.
-
-#the tuneResult returns the MSE, don't forget to convert it to RMSE before comparing the value to our previous model.
-# we use the tune method to train models with ϵ=0,0.1,0.2,...,1  
-#and cost = 2^2,2^3,2^4,...,2^9 which means it will train  88 models (it can take a long time)
-
-hyper_grid <- expand.grid(
+hyper_grid_for_radial <- expand.grid(
   epsilon    = seq(0, 1, by = 0.1),
   cost       = 2^(2:9),
+  gamma      = c(0.008,0.001 ,0.01),
+  RMSE       = 0,
+  MAE        = 0,
+  Rsquared   = 0
+  
+)
+
+hyper_grid_for_polynomial <- expand.grid(
+  epsilon    = seq(0, 1, by = 0.1),
+  cost       = 2^(2:9),
+  gamma      = c(0.008,0.001 ,0.01),
   RMSE       = 0,
   MAE        = 0,
   Rsquared   = 0
 )
 
-# total number of combinations
-nrow(hyper_grid)
+fold_num <- 5  ##
 
-for(i in 1:nrow(hyper_grid)) {
-  
-  fold_num <- 10
-  
-  #Randomly shuffle the data
-  temp <- kc_house[sample(nrow(kc_house)),]
-  
-  #Create 10 equally size folds
-  folds <- cut(seq(1,nrow(temp)),breaks=fold_num,labels=FALSE)
-  
-  rmse_total <- 0
-  r2_total <- 0 
-  mae_total <- 0
-  
-  #Perform 10 fold cross validation
-  for(j in 1:fold_num){
+for(q in 1:2) { 
+  if(q==1) { # kernel = radial
     
-    cat(i, ".iter ", j, ".jiter ")
+    # total number of combinations
+    nrow(hyper_grid_for_radial)
     
-    #Segement your data by fold using the which() function 
-    testIndexes <- which(folds==j,arr.ind=TRUE)
-    testData <- temp[testIndexes, ]
-    trainData <- temp[-testIndexes, ]
+    for(i in 1:nrow(hyper_grid_for_radial)) {
+      
+      #Randomly shuffle the data
+      temp <- kc_house[sample(nrow(kc_house)),]
+      
+      #Create 5 equally size folds
+      folds <- cut(seq(1,nrow(temp)),breaks=fold_num,labels=FALSE)
+      
+      rmse_total <- 0
+      r2_total <- 0 
+      mae_total <- 0
+      
+      #Perform 5 fold cross validation
+      for(j in 1:fold_num){
+        
+        cat(q, "q", i, "i ", j, "j")
+        
+        #Segement your data by fold using the which() function 
+        testIndexes <- which(folds==j,arr.ind=TRUE)
+        testData <- temp[testIndexes, ]
+        trainData <- temp[-testIndexes, ]
+        
+        # train model
+        model_svm <- svm(
+          formula         = price ~ .,  ##target
+          data            = trainData, 
+          kernel          = "radial",
+          epsilon         = hyper_grid_for_radial$epsilon[i],
+          cost            = hyper_grid_for_radial$cost[i],
+          gamma           = hyper_grid_for_radial$gamma[i]
+        )
+        
+        predictions <- predict(model_svm, testData)  ##train model predicting the test data
+        
+        act_pred <- data.frame(obs=testData$price, pred=predictions)
+        err <- defaultSummary(act_pred)
+        err <- as.list(err)
+        
+        rmse_total <- rmse_total + as.numeric(err[1])
+        r2_total <- r2_total + as.numeric(err[2])
+        mae_total <- mae_total + as.numeric(err[3])
+        
+      }
+      
+      # add errors to grid
+      hyper_grid_for_radial$RMSE[i] <- rmse_total / fold_num
+      hyper_grid_for_radial$MAE[i] <- mae_total / fold_num
+      hyper_grid_for_radial$Rsquared[i] <- r2_total / fold_num
+    }
     
-    # train model
-    model_svm <- svm(
-      formula         = price ~ ., 
-      data            = trainData, 
-      kernel          = "radial",
-      epsilon         = hyper_grid$epsilon[i],
-      cost            = hyper_grid$cost[i]
-    )
-    
-    predictions <- predict(model_svm, testData)
-
-    act_pred <- data.frame(obs=testData$price, pred=predictions)
-    err <- defaultSummary(act_pred)
-    err <- as.list(err)
-
-    rmse_total <- rmse_total + as.numeric(err[1])
-    r2_total <- r2_total + as.numeric(err[2])
-    mae_total <- mae_total + as.numeric(err[3])
-    
-    print(err)
   }
   
-  # add errors to grid
-  hyper_grid$RMSE[i] <- rmse_total / fold_num
-  hyper_grid$MAE[i] <- mae_total / fold_num
-  hyper_grid$Rsquared[i] <- r2_total / fold_num
+  if(q==2) { # kernel = polynomial
+    
+    
+    # total number of combinations
+    nrow(hyper_grid_for_polynomial)
+    
+    for(i in 1:nrow(hyper_grid_for_polynomial)) {
+      
+      #Randomly shuffle the data
+      temp <- kc_house[sample(nrow(kc_house)),]
+      
+      #Create 5 equally size folds
+      folds <- cut(seq(1,nrow(temp)),breaks=fold_num,labels=FALSE)
+      
+      rmse_total <- 0
+      r2_total <- 0 
+      mae_total <- 0
+      
+      #Perform 5 fold cross validation
+      for(j in 1:fold_num){
+        
+        cat(q, "q", i, "i ", j, "j")
+        
+        #Segement your data by fold using the which() function 
+        testIndexes <- which(folds==j,arr.ind=TRUE)
+        testData <- temp[testIndexes, ]
+        trainData <- temp[-testIndexes, ]
+        
+        # train model
+        model_svm <- svm(
+          formula         = price ~ .,  ##target
+          data            = trainData, 
+          kernel          = "polynomial",
+          epsilon         = hyper_grid_for_polynomial$epsilon[i],
+          cost            = hyper_grid_for_polynomial$cost[i],
+          gamma           = hyper_grid_for_polynomial$gamma[i]
+          
+        )
+        
+        predictions <- predict(model_svm, testData)  ##train model predicting the test data
+        
+        act_pred <- data.frame(obs=testData$price, pred=predictions)
+        err <- defaultSummary(act_pred)
+        err <- as.list(err)
+        
+        rmse_total <- rmse_total + as.numeric(err[1])
+        r2_total <- r2_total + as.numeric(err[2])
+        mae_total <- mae_total + as.numeric(err[3])
+        
+      }
+      
+      # add errors to grid
+      hyper_grid_for_polynomial$RMSE[i] <- rmse_total / fold_num
+      hyper_grid_for_polynomial$MAE[i] <- mae_total / fold_num
+      hyper_grid_for_polynomial$Rsquared[i] <- r2_total / fold_num
+    }
+    
+  }
+  
 }
-
-hyper_grid %>% 
-  dplyr::arrange(RMSE) %>%
-  head(10)
-
-hyper_grid %>% 
-  dplyr::arrange(MAE) %>%
-  head(10)
-
-hyper_grid %>% 
-  dplyr::arrange(R2) %>%
-  head(10)
-
-# perform a grid search
-tuneResult <- tune(svm, price ~ . ,  data = train,
-                   ranges = list(epsilon = seq(0,0.2,0.1), cost = 2^(2:3))
-)
-#The γ (gama) has to be tuned to better fit the hyperplane to the data. 
-#It is responsible for the linearity degree of the hyperplane, and for that, it is not present when using linear kernels.
-
-print(tuneResult)
-# Draw the tuning graph
-plot(tuneResult)
-
-train_control <- trainControl(method="cv", number=10)
 
 # ==== KNN Regression ====
 
-iteration_num <- 100
+iteration_num <- 50
 k_interval <- 200
 
 knn_rmse <- numeric(k_interval)
 knn_rsquared <- numeric(k_interval)
 knn_mae <- numeric(k_interval)
-
 
 for(i in 1:iteration_num){
   cat(i, " ") # REMOVE
@@ -422,6 +452,8 @@ for(i in 1:iteration_num){
     knn_rsquared[j] <- knn_rsquared[j] + as.numeric(err[2])
     knn_mae[j] <- knn_mae[j] + as.numeric(err[3])
   }
+  
+  cat(i, "iter") #REMOVE
 }
 
 knn_rmse[j] <- knn_rmse[j] / iteration_num
@@ -429,7 +461,6 @@ knn_rsquared[j] <- knn_rsquared[j] / iteration_num
 knn_mae[j] <- knn_mae[j] / iteration_num
 
 plot(knn_rmse, type = "l", ylab="R Squared",xlab="K",main="R Squared Errors for Smarket With Varying K Values (1-50)")
-
 
 # ==== Random Forest ====
 
@@ -522,7 +553,7 @@ hyper_grid %>%
   head(10)
 
 hyper_grid %>% 
-  dplyr::arrange(OOB_Rsquared) %>%
+  dplyr::arrange(desc(OOB_Rsquared)) %>%
   head(10)
 
 # New grid search to compare OOB Error and test errors (R2, MAE, RMSE)
@@ -603,7 +634,7 @@ grid_search %>%
   head(10)
 
 grid_search %>% 
-  dplyr::arrange(Rsquared) %>%
+  dplyr::arrange(desc(Rsquared)) %>%
   head(10)
 
 grid_search %>% 
@@ -612,5 +643,9 @@ grid_search %>%
 
 grid_search %>% 
   dplyr::arrange(OOB_RMSE) %>%
+  head(10)
+
+grid_search %>% 
+  dplyr::arrange(desc(OOB_Rsquared)) %>%
   head(10)
 
