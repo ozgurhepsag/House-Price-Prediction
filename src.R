@@ -146,6 +146,18 @@ kc_house$sqft_lot15 <- NULL
 kc_house$year <- as.factor(kc_house$year)
 kc_house$month <- as.factor(kc_house$month)
 kc_house$day <- as.factor(kc_house$day)
+      
+kc_house %>% 
+  filter(year==2015) %>% 
+  ggplot(aes(month,price,fill=month))+geom_histogram(stat="identity")+
+  ggtitle("Sales Trend in the Year 2015")+
+  theme_economist()
+
+kc_house %>% 
+  filter(year==2014) %>% 
+  ggplot(aes(month,price,fill=month))+geom_histogram(stat="identity")+
+  ggtitle("Sales Trend in the Year 2014")+
+  theme_economist()
 
 # Converting Date to numeric for Regression
 # kc_house$date <- (substr(kc_house$date, 1, 8))
