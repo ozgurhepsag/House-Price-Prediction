@@ -166,11 +166,6 @@ kc_house$sqft_above <- NULL
 model <- lm(price ~ . , data = kc_house)
 summary(model)
 
-# The last item in the output is the **p-value**, which tests the fit of the null hypothesis to our data. 
-# The null hypothesis assumes that there is no relationship between the independent and dependent variables in the model. 
-# The p-value represents the probability you will obtain a result equal to or more extreme than what was actually observed, if the null hypothesis is true. 
-# Generally, if the p-value is very low (below 0.05), it meets threshold to reject the null hypothesis. 
-
 # ==== Test and Evaluation ====
 # ==== Linear Regression ====
 
