@@ -217,8 +217,8 @@ hyper_grid_for_polynomial <- expand.grid(
 )
 
 hyper_grid_for_linear <- expand.grid(
-  epsilon    = seq(0, 1, by = 0.2),
-  cost       = c(2^2,2^4,2^6, 2^8),
+  epsilon    = seq(0, 1, by = 0.1),
+  cost       = 2^(2:9),
   #no gamma
   RMSE       = 0,
   MAE        = 0,
