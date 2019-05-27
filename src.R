@@ -40,15 +40,22 @@ per_waterfront0 <- nrow(kc_house[kc_house$waterfront == 0,]) / nrow(kc_house[]) 
 # Percentage of the waterfron = 0
 per_view0 <- nrow(kc_house[kc_house$view == 0,]) / nrow(kc_house[]) * 100 
 
-ggplot(kc_house, aes(x=yr_renovated)) + geom_histogram() + 
-  ggtitle("Number of Renovated Years") + theme(plot.title = element_text(hjust = 0.5))
-  
+ggplot(kc_house, aes(x=yr_renovated)) + geom_histogram(fill="blue2") + 
+  ggtitle("Number of Renovated Years") + theme(plot.title = element_text(hjust = 0.5)) + labs(x="Year Renovated", y="Count")
+
 # Percentage of the yr_renovated = 0
 per_yr_renovated <- nrow(kc_house[kc_house$yr_renovated == 0,]) / nrow(kc_house) * 100
 cat("Percentage of the yr_renovated = 0 is", per_yr_renovated)
 
-ggplot(kc_house, aes(x=view)) + geom_histogram(fill="blue") + 
-  ggtitle("Histogram for View") + theme(plot.title = element_text(hjust = 0.5))
+per_view <- nrow(kc_house[kc_house$view == 0,]) / nrow(kc_house) * 100
+ggplot(kc_house, aes(x=view)) + geom_histogram(fill="blue2") + 
+  ggtitle("Histogram for View") + theme(plot.title = element_text(hjust = 0.5)) + labs(x="View", y="Count")
+
+mean(kc_house[kc_house$view==0, "price"])
+mean(kc_house[kc_house$view==1, "price"])
+mean(kc_house[kc_house$view==2, "price"])
+mean(kc_house[kc_house$view==3, "price"])
+mean(kc_house[kc_house$view==4, "price"])
 
 # Percentage of the waterfront = 0
 per_waterfront <- nrow(kc_house[kc_house$waterfront == 0,]) / nrow(kc_house) * 100
@@ -56,49 +63,114 @@ cat("Percentage of the waterfron = 0 is", per_waterfront)
 
 ggplot(kc_house, aes(waterfront,fill=waterfront)) + geom_histogram(stat="count", fill=c("blue", "green4")) + theme_economist() +
   ggtitle("The Broker Had More Luck in 2014") + theme(plot.title = element_text(hjust = 0.5))
-  
-ggplot(kc_house,aes(x=price))+geom_density(fill="tomato4")
 
-ggplot(kc_house,aes(x=log(price)))+geom_density(fill="tomato4")
+ggplot(kc_house, aes(x=floors)) + geom_histogram(fill="blue2") + 
+  ggtitle("Histogram for Floors") + theme(plot.title = element_text(hjust = 0.5)) + labs(x="Floors", y="Count")
+
+ggplot(kc_house, aes(x=condition)) + geom_histogram(fill="blue2") + 
+  ggtitle("Histogram for Conditions") + theme(plot.title = element_text(hjust = 0.5)) + labs(x="Condition", y="Count")
+
+ggplot(kc_house, aes(x=grade)) + geom_histogram(fill="blue2") + 
+  ggtitle("Histogram for Grade") + theme(plot.title = element_text(hjust = 0.5)) + labs(x="Grade", y="Count")
+
+ggplot(kc_house, aes(x=bedrooms)) + geom_histogram(fill="blue2") + 
+  ggtitle("Histogram for Bedrooms") + theme(plot.title = element_text(hjust = 0.5)) + labs(x="Bedroom", y="Count")
+
+ggplot(kc_house, aes(x=bathrooms)) + geom_histogram(fill="blue2") + 
+  ggtitle("Histogram for Bathroom") + theme(plot.title = element_text(hjust = 0.5)) + labs(x="Bathroom", y="Count")
+
+plot(main = "", density(kc_house$price), col = "blue", xlab = "Distribution of the total size of house")
+
+plot(main = "", density(kc_house$sqft_above), col = "blue", xlab = "Distribution of the size of the living rooms")
+
+plot(main = "", density(kc_house$sqft_living15), col = "blue", xlab = "Distribution of the sqft_living15")
+
+plot(main = "", density(kc_house$sqft_living), col = "blue", xlab = "Distribution of the total size of house")
 
 ggplot(kc_house,aes(x=sqft_living))+geom_histogram(binwidth=50,fill="tomato")
 
 ggplot(kc_house,aes(x=bathrooms)) + geom_histogram(fill="green4",binwidth=0.5,size=0.1) +
   scale_x_continuous(limits=c(1,8))
 
-ggplot(kc_house, aes(kc_house$zipcode)) + stat_bin(binwidth=1, colour="black", fill="green")
+label<-levels(factor(kc_house$zipcode))
+mean_price<-rep(0,70)
+for( i in 1:length(label)){
+  mean_price[i]<-mean(kc_house$price[kc_house$zipcode==label[i]])}
+barplot(mean_price,xlab="Zipcode",ylab="Mean price",main="Zipcode vs Meanprice", col="skyblue")
+
+ggplot(kc_house, aes(kc_house$zipcode)) + stat_bin(binwidth=1, colour="black", fill="skyblue") +  labs(x="Zipcode", y="Count")
 
 mycolors = c(brewer.pal(name="Dark2", n = 8), brewer.pal(name="Paired", n = 6))
 
 kc_house %>% filter(bedrooms<30)%>%
   ggplot(aes(x=bedrooms,y=price,col=bedrooms))+
   geom_point(alpha=0.5,size=2)+
-  geom_smooth(method="lm",se=F)+
-  labs("title=Bedrooms vs Price")+scale_color_gradientn(colors=mycolors)+theme(legend.position="none")
+  geom_smooth(method="lm",se=F, color = "red")+
+  labs("title=Bedrooms vs Price")+theme(legend.position="none")
 
 kc_house %>%
   ggplot(aes(x=bathrooms,y=price,col=bathrooms))+
-  geom_point(alpha=0.5,size=2)+
-  geom_smooth(method="lm",se=F)+
-  labs("title=Bedrooms vs Price")+scale_color_gradientn(colors=mycolors)+theme(legend.position="none")
+  geom_point()+
+  geom_smooth(method="lm",se=F, color = "red")+
+  labs("title=Bedrooms vs Price")+theme(legend.position="none")
 
-ggplot(kc_house, aes(yr_built))+geom_histogram(binwidth=5,fill="tomato",alpha=0.5)+
-  scale_x_continuous(limits=c(1900,2016))
+kc_house %>%
+  ggplot(aes(x=grade,y=price,col=grade))+
+  geom_point()+
+  geom_smooth(method="lm",se=F, color = "red")+
+  labs("title=Grade vs Price")+theme(legend.position="none")
+
+kc_house %>%
+  ggplot(aes(x=view,y=price,col=view))+
+  geom_point()+
+  geom_smooth(method="lm",se=F, color = "red")+
+  labs("title=View vs Price")+theme(legend.position="none")
+
+kc_house %>%
+  ggplot(aes(x=floors,y=price,col=floors))+
+  geom_point()+
+  geom_smooth(method="lm",se=F, color = "red")+
+  labs("title=Floors vs Price")+theme(legend.position="none")
+
+kc_house %>%
+  ggplot(aes(x=view,y=price,col=view))+
+  geom_point()+
+  geom_smooth(method="lm",se=F, color = "red")+
+  labs("title=View vs Price")+theme(legend.position="none")
+
+kc_house %>%
+  ggplot(aes(x=yr_renovated,y=price,col=yr_renovated))+
+  geom_point()+
+  geom_smooth(method="lm",se=F, color = "red")+
+  labs("title=Renovated Years vs Price")+theme(legend.position="none")
+
+kc_house %>%
+  ggplot(aes(x=waterfront,y=price,col=waterfront))+
+  geom_point()+
+  geom_smooth(method="lm",se=F, color = "red")+
+  labs("title=Waterfront vs Price")+theme(legend.position="none")
+
+kc_house %>% 
+  ggplot(aes(x=sqft_living,y=price,col=sqft_living)) + xlab("Size of house")+ ylab("Price") + 
+  geom_point() + geom_smooth(method=lm, color = "red") +labs("title=Size of the house vs Price") +theme(legend.position="none")
+
+ggplot(kc_house, aes(yr_built))+geom_histogram(binwidth=5,fill="skyblue",alpha=0.5)+
+  scale_x_continuous(limits=c(1900,2016))+ labs(x="Built Year", y="Count")
 
 ggplot(kc_house, aes(yr_built, price)) +
   geom_smooth(se = FALSE, colour = "dodgerblue3") +
   scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) +
   scale_y_continuous(breaks = scales::pretty_breaks(n = 8)) +
   theme_minimal() +
-  theme(text = element_text(face = "bold"))
+  theme(text = element_text(face = "bold"))+ labs(x="Built Year", y="Price")
 
 ggplot(data = kc_house, mapping = aes(x = sqft_living, y = price)) + 
   geom_point(colour = 'red') + geom_smooth(method = 'lm')
 
-corr = cor(kc_house[,3:21], method = "pearson")
-corrplot(corr, method = "color", outline = T, cl.pos = 'n', rect.col = "black",  tl.col = "indianred4"
-         , addCoef.col = "black", number.digits = 2, number.cex = 0.60, tl.cex = 0.7
-         , cl.cex = 1, col = colorRampPalette(c("green4","white","red"))(100))
+corr = corrplot::cor(kc_house[,3:21], method = "pearson")
+corrplot::corrplot(corr, method = "color", outline = T, cl.pos = 'n', rect.col = "black",  tl.col = "indianred4"
+                   , addCoef.col = "black", number.digits = 2, number.cex = 0.60, tl.cex = 0.7
+                   , cl.cex = 1, col = colorRampPalette(c("green4","white","red"))(100))
 
 # ==== Data Preparation ====
 
@@ -119,7 +191,7 @@ tapply(kc_house$price,kc_house$bedrooms,median)
 
 # kc_house[kc_house$bedrooms == 10, 'bedrooms'] <- 6
 # kc_house[kc_house$bedrooms == 9 | kc_house$bedrooms == 8, 'bedrooms'] <- 7
- 
+
 # tapply(kc_house$price,kc_house$bathrooms,length)
 # tapply(kc_house$price,kc_house$bathrooms,median)
 
@@ -130,23 +202,19 @@ kc_house$id <-  NULL
 kc_house$sqft_living15 <- NULL
 kc_house$sqft_lot15 <- NULL
 
-# zipcode is directly connected to latitude and longitude, so only zipcode will be fine.
-# kc_house$lat = NULL
-# kc_house$long = NULL
-
 # Separate the Date to Year, Month and Day 
- kc_house <- kc_house %>% 
-   mutate(Date=str_replace_all(kc_house$date,"T0{1,}","")) %>% 
-   select(Date,everything(),-date)
+kc_house <- kc_house %>% 
+  mutate(Date=str_replace_all(kc_house$date,"T0{1,}","")) %>% 
+  select(Date,everything(),-date)
 
- kc_house <- kc_house %>% 
-   mutate(Date=ymd(Date)) %>% 
-   separate(Date,c("year","month","day"))
+kc_house <- kc_house %>% 
+  mutate(Date=ymd(Date)) %>% 
+  separate(Date,c("year","month","day"))
 
 kc_house$year <- as.factor(kc_house$year)
 kc_house$month <- as.factor(kc_house$month)
 kc_house$day <- as.factor(kc_house$day)
-      
+
 kc_house %>% 
   filter(year==2015) %>% 
   ggplot(aes(month,price,fill=month))+geom_histogram(stat="identity")+
@@ -158,12 +226,6 @@ kc_house %>%
   ggplot(aes(month,price,fill=month))+geom_histogram(stat="identity")+
   ggtitle("Sales Trend in the Year 2014")+
   theme_economist()
-
-# Converting Date to numeric for Regression
-# kc_house$date <- (substr(kc_house$date, 1, 8))
-# kc_house$date <- ymd(kc_house$date)
-# kc_house$date <- as.numeric(as.Date(kc_house$date))
-# kc_house$date <- kc_house$date - 16191
 
 kc_house$renovated <- ifelse(kc_house$yr_renovated == 0, 0, 1)
 kc_house$yr_renovated <- NULL
@@ -190,7 +252,7 @@ best_r2_val <- 0
 best_mae_val <- 0
 best_rmse_val <- 0
 
-iteration_num <- 50
+iteration_num <- 100  
 
 for(i in c(1:iteration_num)){
   
@@ -236,7 +298,6 @@ for(i in c(1:iteration_num)){
       best_mae <- test_lr
     }
   }
-  
   # Keep error results on every iteration
   errors <- rbind(errors, row_error)
 }
@@ -268,7 +329,6 @@ ggplot(errors, aes(x=1:iteration_num, y=MAE)) + geom_line() + ggtitle("MAE for H
 ggplot(errors, aes(x=1:iteration_num, y=RMSE)) + geom_line() + ggtitle("RMSE for House Prices") +
   theme(plot.title = element_text(hjust = 0.5)) + labs(x="Iteration Number")
 
-
 calculate_rmse <- function(true, predicted) {
   res <- true - predicted
   rmse <- sqrt(mean(res^2))
@@ -287,246 +347,46 @@ calculate_rsquare <- function(true, predicted) {
   return(rsq)
 }
 
-
-# ==== SVR ====
-
-##GRID SEARCHING TO TUNING OUR MODEL TO SEE BEST HYPERPARAMETERS FOR BOTH OF 3(RADIAL,POLYNOMIAL,LINEAR) KERNELS.
-
-hyper_grid_for_radial <- expand.grid(
-  epsilon    = seq(0, 1, by = 0.1),
-  cost       = 2^(2:9),
-  gamma      = c(0.008,0.001 ,0.01),
-  RMSE       = 0,
-  MAE        = 0,
-  Rsquared   = 0
-  
-)
-
-hyper_grid_for_polynomial <- expand.grid(
-  epsilon    = seq(0, 1, by = 0.1),
-  cost       = 2^(2:9),
-  gamma      = c(0.008,0.001 ,0.01),
-  RMSE       = 0,
-  MAE        = 0,
-  Rsquared   = 0
-)
-
-fold_num <- 5  ##
-
-for(q in 1:2) { 
-  if(q==1) { # kernel = radial
-    
-    # total number of combinations
-    nrow(hyper_grid_for_radial)
-    
-    for(i in 1:nrow(hyper_grid_for_radial)) {
-      
-      #Randomly shuffle the data
-      temp <- kc_house[sample(nrow(kc_house)),]
-      
-      #Create 5 equally size folds
-      folds <- cut(seq(1,nrow(temp)),breaks=fold_num,labels=FALSE)
-      
-      rmse_total <- 0
-      r2_total <- 0 
-      mae_total <- 0
-      
-      #Perform 5 fold cross validation
-      for(j in 1:fold_num){
-        
-        cat(q, "q", i, "i ", j, "j")
-        
-        #Segement your data by fold using the which() function 
-        testIndexes <- which(folds==j,arr.ind=TRUE)
-        testData <- temp[testIndexes, ]
-        trainData <- temp[-testIndexes, ]
-        
-        # train model
-        model_svm <- svm(
-          formula         = price ~ .,  ##target
-          data            = trainData, 
-          kernel          = "radial",
-          epsilon         = hyper_grid_for_radial$epsilon[i],
-          cost            = hyper_grid_for_radial$cost[i],
-          gamma           = hyper_grid_for_radial$gamma[i]
-        )
-        
-        predictions <- predict(model_svm, testData)  ##train model predicting the test data
-        
-        act_pred <- data.frame(obs=testData$price, pred=predictions)
-        err <- defaultSummary(act_pred)
-        err <- as.list(err)
-        
-        rmse_total <- rmse_total + as.numeric(err[1])
-        r2_total <- r2_total + as.numeric(err[2])
-        mae_total <- mae_total + as.numeric(err[3])
-        
-      }
-      
-      # add errors to grid
-      hyper_grid_for_radial$RMSE[i] <- rmse_total / fold_num
-      hyper_grid_for_radial$MAE[i] <- mae_total / fold_num
-      hyper_grid_for_radial$Rsquared[i] <- r2_total / fold_num
-    }
-    
-  }
-  
-  if(q==2) { # kernel = polynomial
-    
-    
-    # total number of combinations
-    nrow(hyper_grid_for_polynomial)
-    
-    for(i in 1:nrow(hyper_grid_for_polynomial)) {
-      
-      #Randomly shuffle the data
-      temp <- kc_house[sample(nrow(kc_house)),]
-      
-      #Create 5 equally size folds
-      folds <- cut(seq(1,nrow(temp)),breaks=fold_num,labels=FALSE)
-      
-      rmse_total <- 0
-      r2_total <- 0 
-      mae_total <- 0
-      
-      #Perform 5 fold cross validation
-      for(j in 1:fold_num){
-        
-        cat(q, "q", i, "i ", j, "j")
-        
-        #Segement your data by fold using the which() function 
-        testIndexes <- which(folds==j,arr.ind=TRUE)
-        testData <- temp[testIndexes, ]
-        trainData <- temp[-testIndexes, ]
-        
-        # train model
-        model_svm <- svm(
-          formula         = price ~ .,  ##target
-          data            = trainData, 
-          kernel          = "polynomial",
-          epsilon         = hyper_grid_for_polynomial$epsilon[i],
-          cost            = hyper_grid_for_polynomial$cost[i],
-          gamma           = hyper_grid_for_polynomial$gamma[i]
-          
-        )
-        
-        predictions <- predict(model_svm, testData)  ##train model predicting the test data
-        
-        act_pred <- data.frame(obs=testData$price, pred=predictions)
-        err <- defaultSummary(act_pred)
-        err <- as.list(err)
-        
-        rmse_total <- rmse_total + as.numeric(err[1])
-        r2_total <- r2_total + as.numeric(err[2])
-        mae_total <- mae_total + as.numeric(err[3])
-        
-      }
-      
-      # add errors to grid
-      hyper_grid_for_polynomial$RMSE[i] <- rmse_total / fold_num
-      hyper_grid_for_polynomial$MAE[i] <- mae_total / fold_num
-      hyper_grid_for_polynomial$Rsquared[i] <- r2_total / fold_num
-    }
-    
-  }
-  
-}
-
-# ==== KNN Regression ====
-
-iteration_num <- 50
-k_interval <- 200
-
-knn_rmse <- numeric(k_interval)
-knn_rsquared <- numeric(k_interval)
-knn_mae <- numeric(k_interval)
-
-for(i in 1:iteration_num){
-  cat(i, " ") # REMOVE
-  sample_knn <- sample.int(n=nrow(kc_house), size = floor(0.70*nrow(kc_house)), replace = F)
-  train_knn <- kc_house[sample_knn, ]
-  test_knn  <- kc_house[-sample_knn, ]
-  
-  for(j in 1:k_interval){
-    model_knn <- knnreg(price ~ ., train_knn, k = j)
-    predictions_knn <- predict(model_knn, test_knn)
-    
-    act_pred <- data.frame(obs=test_knn$price, pred=predictions_knn)
-    err <- defaultSummary(act_pred)
-    err <- as.list(err)
-    
-    knn_rmse[j] <- knn_rmse[j] + as.numeric(err[1])
-    knn_rsquared[j] <- knn_rsquared[j] + as.numeric(err[2])
-    knn_mae[j] <- knn_mae[j] + as.numeric(err[3])
-  }
-  
-  cat(i, "iter") #REMOVE
-}
-
-knn_rmse[j] <- knn_rmse[j] / iteration_num
-knn_rsquared[j] <- knn_rsquared[j] / iteration_num
-knn_mae[j] <- knn_mae[j] / iteration_num
-
-plot(knn_rmse, type = "l", ylab="R Squared",xlab="K",main="R Squared Errors for Smarket With Varying K Values (1-50)")
-
 # ==== Random Forest ====
 
 # One hot encoding for "zipcode" feature. 
 # Because, randomForest funtion does not work with the feature that has more than 53 categories.
-temp <- as.data.frame(kc_house$zipcode)
-names(temp) <- "strcol"
+# temp <- as.data.frame(kc_house$zipcode)
+# names(temp) <- "strcol"
 
-for(level in unique(temp$strcol)){
-  kc_house[paste("is", level, sep = "_")] <- ifelse(temp$strcol == level, 1, 0)
-}
+# for(level in unique(temp$strcol)){
+#   kc_house[paste("is", level, sep = "_")] <- ifelse(temp$strcol == level, 1, 0)
+# }
 
-zipcode <- kc_house$zipcode
-kc_house$zipcode <- NULL
+# zipcode <- kc_house$zipcode
+# kc_house$zipcode <- NULL
 
-feature_names <- setdiff(names(kc_house), "price")
+# feature_names <- setdiff(names(kc_house), "price")
 
-sample_rf <- sample.int(n=nrow(kc_house), size = floor(0.70*nrow(kc_house)), replace = F)
-
+# sample_rf <- sample.int(n=nrow(kc_house), size = floor(0.70*nrow(kc_house)), replace = F)
 # Splitting train and test data
-train_rf <- kc_house[sample_rf, ]
-test_rf  <- kc_house[-sample_rf, ]
+# train_rf <- kc_house[sample_rf, ]
+# test_rf  <- kc_house[-sample_rf, ]
 
-#rf_model <- ranger(price ~ ., train_rf, num.trees = 700, mtry = floor(length(feature_names) / 3))
-rf_model <- randomForest(price ~ ., train_rf, ntree = 200, mtry = floor(length(feature_names) / 3), 
-                         sampsize = ceiling(.8*nrow(train_rf)), importance = T)
-rf_model2 <- randomForest(price ~ ., train_rf, ntree = 700, mtry = floor(length(feature_names) / 3))
+# #rf_model <- ranger(price ~ ., train_rf, num.trees = 700, mtry = floor(length(feature_names) / 3))
+# rf_model <- randomForest(price ~ ., train_rf, ntree = 500, mtry = floor(length(feature_names) / 3), importance = T)
+# plot(rf_model)
 
-plot(rf_model)
-rf_model
-plot(rf_model2)
+# predictions_rf <- predict(rf_model, test_rf)
+# # test_rf$pred <- predictions_rf$predictions
+# test_rf$pred <- predictions_rf
+# act_pred <- data.frame(obs=test_rf$price, pred=test_rf$pred)
+# err <- defaultSummary(act_pred)
+# err <- as.list(err)
 
-predictions_rf <- predict(rf_model, test_rf)
-# test_rf$pred <- predictions_rf$predictions
-test_rf$pred <- predictions_rf
-act_pred <- data.frame(obs=test_rf$price, pred=test_rf$pred)
-err <- defaultSummary(act_pred)
-err <- as.list(err)
+# print(err)
+# summary(rf_model)
+# importance(rf_model)
+# varImpPlot(rf_model,type=2)
 
-print(err)
-summary(rf_model)
-importance(rf_model)
-varImpPlot(rf_model,type=2)
-
-# names of features
-features_for_tune <- setdiff(names(train_rf), "price")
-
-m2 <- tuneRF(
-  x          = train_rf[features_for_tune],
-  y          = train_rf$price,
-  ntreeTry   = 500,
-  mtryStart  = 5,
-  stepFactor = 0.5,
-  improve    = 0.01,
-  trace      = T      # to not show real-time progress 
-)
-
+# for grid search
 hyper_grid <- expand.grid(
-  mtry       = seq(15, 65, by = 2),
+  mtry       = seq(1, 18, by = 1),
   node_size  = seq(2, 9, by = 1),
   sample_size = c(.632, .75, .80),
   OOB_RMSE   = 0,
@@ -547,9 +407,6 @@ for(i in 1:nrow(hyper_grid)) {
     min.node.size   = hyper_grid$node_size[i],
     sample.fraction = hyper_grid$sample_size[i]
   )
-  
-  cat(i, " ") # REMOVE
-  
   # Add OOB error to grid
   hyper_grid$OOB_RMSE[i] <- sqrt(model_ranger$prediction.error)
   hyper_grid$OOB_Rsquared[i] <- model_ranger$r.squared
@@ -563,9 +420,9 @@ hyper_grid %>%
   dplyr::arrange(desc(OOB_Rsquared)) %>%
   head(10)
 
-# New grid search to compare OOB Error and test errors (R2, MAE, RMSE)
+# New grid search to compare OOB Error and test errors (R2, MAE, RMSE) with cross validation
 grid_search <- expand.grid(
-  mtry       = seq(15, 65, by = 2),
+  mtry       = seq(1, 18, by = 1),
   node_size  = seq(2, 9, by = 1),
   sample_size = c(.632, .75, .80),
   OOB_RMSE   = 0,
@@ -596,8 +453,6 @@ for(i in 1:nrow(grid_search)) {
   #Perform 10 fold cross validation
   for(j in 1:fold_num){
     
-    cat(i, ".iter ", j, ".jiter ") # REMOVE
-    
     #Segement your data by fold using the which() function 
     testIndexes <- which(folds==j,arr.ind=TRUE)
     testData <- temp[testIndexes, ]
@@ -624,8 +479,6 @@ for(i in 1:nrow(grid_search)) {
     rmse_total <- rmse_total + as.numeric(err[1])
     r2_total <- r2_total + as.numeric(err[2])
     mae_total <- mae_total + as.numeric(err[3])
-    
-    print(err) # REMOVE
   }
   
   # add errors to grid
@@ -656,3 +509,319 @@ grid_search %>%
   dplyr::arrange(desc(OOB_Rsquared)) %>%
   head(10)
 
+grid_search %>%
+  ggplot(aes(x=OOB_RMSE,y=RMSE))+
+  geom_point()+
+  geom_smooth(method="lm",se=F, color = "red")+
+  labs("title=Grade vs Price")+theme(legend.position="none")
+
+grid_search %>%
+  ggplot(aes(x=OOB_Rsquared,y=Rsquared))+
+  geom_point()+
+  geom_smooth(method="lm",se=F, color = "red")+
+  labs("title=Grade vs Price")+theme(legend.position="none")
+
+fold_num <- 10
+set.seed(1234)
+#Randomly shuffle the data
+temp <- kc_house[sample(nrow(kc_house)),]
+
+#Create 10 equally size folds
+folds <- cut(seq(1,nrow(temp)),breaks=fold_num,labels=FALSE)
+
+cv_rmse <- numeric(fold_num)
+cv_rsquared <- numeric(fold_num)
+cv_mae <- numeric(fold_num)
+
+for(j in 1:fold_num){
+  
+  #Segement your data by fold using the which() function 
+  testIndexes <- which(folds==j,arr.ind=TRUE)
+  testData <- temp[testIndexes, ]
+  trainData <- temp[-testIndexes, ]
+  
+  model_ran <- ranger(
+    formula         = price ~ ., data = trainData, num.trees = 300, mtry = 11,
+    min.node.size   = 3, sample.fraction = 0.8
+  )
+  
+  predictions <- predict(model_ran, testData)
+  act_pred <- data.frame(obs=testData$price, pred=predictions$predictions)
+  err <- defaultSummary(act_pred)
+  err <- as.list(err)
+  
+  cv_rmse[j] <- as.numeric(err[1])
+  cv_rsquared[j] <- as.numeric(err[2])
+  cv_mae[j] <- as.numeric(err[3])
+}
+
+cat("Avarage RMSE of the 10-fold cross validation is", mean(cv_rmse), ". Avarage R-squared of the 10-fold cross validation is", 
+    mean(cv_rsquared), ". Avarage MAE of the 10-fold cross validation is", mean(cv_mae))
+
+ggplot(as.data.frame(cv_rmse), aes(x=1:fold_num, y=cv_rmse)) + geom_line() + ggtitle("RMSE for 10-Folds") +
+  theme(plot.title = element_text(hjust = 0.5)) + labs(x="Fold Number", y="RMSE") + scale_x_discrete(limits=c(1:fold_num))
+
+ggplot(as.data.frame(cv_rsquared), aes(x=1:fold_num, y=cv_rsquared)) + geom_line() + ggtitle("R-squared for 10-Folds") +
+  theme(plot.title = element_text(hjust = 0.5)) + labs(x="Fold Number", y="R-squared") + scale_x_discrete(limits=c(1:fold_num))
+
+ggplot(as.data.frame(cv_rmse), aes(x=1:fold_num, y=cv_mae)) + geom_line() + ggtitle("MAE for 10-Folds") +
+  theme(plot.title = element_text(hjust = 0.5)) + labs(x="Fold Number", y="MAE") + scale_x_discrete(limits=c(1:fold_num))
+# ==== SVR ====
+
+sample <- sample.int(n=nrow(kc_house), size = floor(0.70*nrow(kc_house)), replace = F)
+
+# Splitting train and test data
+train <- kc_house[sample, ]
+test  <- kc_house[-sample, ]
+
+#create svr model
+train_model <- svm(price ~ . , data = train)
+summary(train_model)
+predictPricesvm <- predict(train_model, test)  ##train model is predicting the test data
+error <- test$price - predictPricesvm  ## basic error of the model to  the test data
+svrPredictionRMSE <- rmse(test$price,predictPricesvm)  ##rmse of the model to the test data
+
+#now,
+#tuning the model / hyperparameter optimization
+#The standard way of doing it is by doing a grid search.
+
+#GRID SEARCHING TO TUNING OUR MODEL TO SEE BEST HYPERPARAMETERS FOR BOTH OF 3(RADIAL,POLYNOMIAL,LINEAR) KERNELS.
+
+hyper_grid_for_radial <- expand.grid(
+  epsilon    = seq(0, 1, by = 0.1),
+  cost       = 2^(2:9),
+  gamma      = c(0.008,0.001 ,0.01),
+  RMSE       = 0,
+  MAE        = 0,
+  Rsquared   = 0
+  
+)
+
+hyper_grid_for_polynomial <- expand.grid(
+  epsilon    = seq(0, 1, by = 0.1),
+  cost       = 2^(2:9),
+  gamma      = c(0.008,0.001 ,0.01),
+  degree     = c(2,2.5),
+  RMSE       = 0,
+  MAE        = 0,
+  Rsquared   = 0
+)
+
+hyper_grid_for_linear <- expand.grid(
+  epsilon    = seq(0, 1, by = 0.1),
+  cost       = 2^(2:9),
+  #no gamma
+  RMSE       = 0,
+  MAE        = 0,
+  Rsquared   = 0
+)
+
+fold_num <- 5  ##
+
+for(q in 1:3) {
+  
+  if(q==1) { # kernel = radial
+    
+    # total number of combinations
+    nrow(hyper_grid_for_radial)
+    
+    for(i in 1:nrow(hyper_grid_for_radial)) {
+      
+      #Randomly shuffle the data
+      temp <- kc_house[sample(nrow(kc_house)),]
+      
+      #Create 5 equally size folds
+      folds <- cut(seq(1,nrow(temp)),breaks=fold_num,labels=FALSE)
+      
+      rmse_total <- 0
+      r2_total <- 0
+      mae_total <- 0
+      
+      #Perform 5 fold cross validation
+      for(j in 1:fold_num){
+        
+        #Segement your data by fold using the which() function
+        testIndexes <- which(folds==j,arr.ind=TRUE)
+        testData <- temp[testIndexes, ]
+        trainData <- temp[-testIndexes, ]
+        
+        # train model
+        model_svm <- svm(
+          formula         = price ~ .,  ##target
+          data            = trainData,
+          kernel          = "radial",
+          epsilon         = hyper_grid_for_radial$epsilon[i],
+          cost            = hyper_grid_for_radial$cost[i],
+          gamma           = hyper_grid_for_radial$gamma[i]
+        )
+        
+        predictions <- predict(model_svm, testData)  ##train model predicting the test data
+        
+        act_pred <- data.frame(obs=testData$price, pred=predictions)
+        err <- defaultSummary(act_pred)
+        err <- as.list(err)
+        
+        rmse_total <- rmse_total + as.numeric(err[1])
+        r2_total <- r2_total + as.numeric(err[2])
+        mae_total <- mae_total + as.numeric(err[3])
+      }
+      
+      # add errors to grid
+      hyper_grid_for_radial$RMSE[i] <- rmse_total / fold_num
+      hyper_grid_for_radial$MAE[i] <- mae_total / fold_num
+      hyper_grid_for_radial$Rsquared[i] <- r2_total / fold_num
+    }
+  }
+  if(q==2) { # kernel = polynomial
+    
+    #total number of combinations
+    nrow(hyper_grid_for_polynomial)
+    
+    for(i in 1:nrow(hyper_grid_for_polynomial)) {
+      
+      #Randomly shuffle the data
+      temp <- kc_house[sample(nrow(kc_house)),]
+      
+      #Create 5 equally size folds
+      folds <- cut(seq(1,nrow(temp)),breaks=fold_num,labels=FALSE)
+      
+      rmse_total <- 0
+      r2_total <- 0 
+      mae_total <- 0
+      
+      #Perform 5 fold cross validation
+      for(j in 1:fold_num){
+        
+        #Segement your data by fold using the which() function 
+        testIndexes <- which(folds==j,arr.ind=TRUE)
+        testData <- temp[testIndexes, ]
+        trainData <- temp[-testIndexes, ]
+        
+        # train model
+        model_svm <- svm(
+          formula         = price ~ .,  ##target
+          data            = trainData, 
+          kernel          = "polynomial",
+          epsilon         = hyper_grid_for_polynomial$epsilon[i],
+          cost            = hyper_grid_for_polynomial$cost[i],
+          gamma           = hyper_grid_for_polynomial$gamma[i],
+          degree          = hyper_grid_for_polynomial$degree[i]
+        )
+        
+        predictions <- predict(model_svm, testData)  ##train model predicting the test data
+        
+        act_pred <- data.frame(obs=testData$price, pred=predictions)
+        err <- defaultSummary(act_pred)
+        err <- as.list(err)
+        
+        rmse_total <- rmse_total + as.numeric(err[1])
+        r2_total <- r2_total + as.numeric(err[2])
+        mae_total <- mae_total + as.numeric(err[3])
+      }
+      
+      # add errors to grid
+      hyper_grid_for_polynomial$RMSE[i] <- rmse_total / fold_num
+      hyper_grid_for_polynomial$MAE[i] <- mae_total / fold_num
+      hyper_grid_for_polynomial$Rsquared[i] <- r2_total / fold_num
+    }
+  }
+  if(q==3) { ## kernel = linear
+    
+    # total number of combinations
+    nrow(hyper_grid_for_linear)
+    
+    for(i in 1:nrow(hyper_grid_for_linear)) {
+      
+      #Randomly shuffle the data
+      temp <- kc_house[sample(nrow(kc_house)),]
+      
+      #Create 5 equally size folds
+      folds <- cut(seq(1,nrow(temp)),breaks=fold_num,labels=FALSE)
+      
+      rmse_total <- 0
+      r2_total <- 0
+      mae_total <- 0
+      
+      #Perform 5 fold cross validation
+      for(j in 1:fold_num){
+        
+        #Segement your data by fold using the which() function
+        testIndexes <- which(folds==j,arr.ind=TRUE)
+        testData <- temp[testIndexes, ]
+        trainData <- temp[-testIndexes, ]
+        
+        # train model
+        model_svm <- svm(
+          formula         = price ~ .,  ##target
+          data            = trainData,
+          kernel          = "linear",
+          epsilon         = hyper_grid_for_linear$epsilon[i],
+          cost            = hyper_grid_for_linear$cost[i]
+          #no gamma for linear
+        )
+        
+        predictions <- predict(model_svm, testData)  ##train model predicting the test data
+        
+        act_pred <- data.frame(obs=testData$price, pred=predictions)
+        err <- defaultSummary(act_pred)
+        err <- as.list(err)
+        
+        rmse_total <- rmse_total + as.numeric(err[1])
+        r2_total <- r2_total + as.numeric(err[2])
+        mae_total <- mae_total + as.numeric(err[3])
+      }
+      
+      # add errors to grid
+      hyper_grid_for_linear$RMSE[i] <- rmse_total / fold_num
+      hyper_grid_for_linear$MAE[i] <- mae_total / fold_num
+      hyper_grid_for_linear$Rsquared[i] <- r2_total / fold_num
+    }
+  }
+}
+
+#list best 10 error types for each kernels.
+top10_poly <- hyper_grid_for_polynomial %>% 
+  dplyr::arrange(RMSE) %>%
+  head(10)
+
+hyper_grid_for_polynomial %>% 
+  dplyr::arrange(MAE) %>%
+  head(10)
+
+hyper_grid_for_polynomial %>% 
+  dplyr::arrange(desc(Rsquared)) %>%
+  head(10)  
+
+top10_radial <- hyper_grid_for_radial %>%
+  dplyr::arrange(RMSE) %>%
+  head(10)
+
+hyper_grid_for_radial %>%
+  dplyr::arrange(MAE) %>%
+  head(10)
+
+hyper_grid_for_radial %>%
+  dplyr::arrange(desc(Rsquared)) %>%
+  head(10)
+
+top10_linear <- hyper_grid_for_linear %>%
+  dplyr::arrange(RMSE) %>%
+  head(10)
+
+hyper_grid_for_linear %>%
+  dplyr::arrange(MAE) %>%
+  head(10)
+
+hyper_grid_for_linear %>%
+  dplyr::arrange(desc(Rsquared)) %>%
+  head(10)
+
+RMSE_frame <- data.frame("MAE_Poly"=top10_poly$RMSE,"MAE_Radial" = top10_radial$RMSE,"MAE_Linear" = top10_linear$RMSE)
+
+x1 <- c(1:10)
+ggplot() +
+  geom_point(data = RMSE_frame, aes(x = x1, y = RMSE_Poly), color="red") +
+  geom_point(data = RMSE_frame, aes(x = x1, y = RMSE_Radial), color = "blue") +
+  geom_point(data = RMSE_frame, aes(x = x1, y = RMSE_Linear), color = "black") +
+  ylab('RMSE Values') +
+  xlab('Best 10 instance')+ scale_x_discrete(limits=c(1:10))
