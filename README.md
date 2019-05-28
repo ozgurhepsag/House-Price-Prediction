@@ -2,7 +2,7 @@
 
 ## Introduction 
 
-Purpose of this project is to implement machine learning algorithms on a real data set Visualization and exploration of the dataset and data preparation are also the important parts of this project. Linear Regression, SVR and Random Forest have been implemented. After, tuning process of the algorithms, performance changings have been analyzed and optimal parameters have been found for the required functions of the algorithms. Performance comparison among these algorithms has been done by using different evaluation metrics. To complete all of those statistical computing and graphics operations, R language has been used.
+Purpose of this project is to implement machine learning algorithms on a real data set. Visualization and exploration of the dataset and data preparation are also the important parts of this project. Linear Regression, SVR and Random Forest have been implemented. After, tuning process of the algorithms, performance changings have been analyzed and optimal parameters have been found for the required functions of the algorithms. Performance comparison among these algorithms has been done by using different evaluation metrics. To complete all of those statistical computing and graphics operations, R language has been used.
 
 ## Understanding the Data
 
